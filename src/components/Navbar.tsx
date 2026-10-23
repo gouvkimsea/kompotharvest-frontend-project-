@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Menu, X, ChevronDown, Globe } from 'lucide-react';
 import { ASSETS } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
-import { useI18n, LANGUAGES, CURRENCIES, Language, Currency } from '../utils/i18nContext';
+import { useI18n, LANGUAGES, Language } from '../utils/i18nContext';
 
 export type ActivePage = 'home' | 'shop' | 'way' | 'autoship' | 'recipes' | 'rewards';
 
@@ -57,22 +57,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCart,
   onOpenDiscountModal,
 }) => {
-  const { language, setLanguage, currency, setCurrency, t, formatPrice } = useI18n();
+  const { language, setLanguage, t, formatPrice } = useI18n();
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currMenuOpen, setCurrMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const langMenuRef = useRef<HTMLDivElement | null>(null);
-  const currMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
         setLangMenuOpen(false);
-      }
-      if (currMenuRef.current && !currMenuRef.current.contains(event.target as Node)) {
-        setCurrMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -105,7 +100,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     setOpenDropdown(null);
     setMobileMenuOpen(false);
     setLangMenuOpen(false);
-    setCurrMenuOpen(false);
     onNavigate(page, categoryFilter);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -208,7 +202,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="lang-selector-btn"
               onClick={() => {
                 setLangMenuOpen((prev) => !prev);
-                setCurrMenuOpen(false);
               }}
               aria-label={`Selected language: ${LANGUAGES[language].label}. Click to switch.`}
               aria-expanded={langMenuOpen}
@@ -254,68 +247,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span className="flex items-center gap-2.5">
                         <span className="text-base leading-none">{item.flag}</span>
                         <span>{item.nativeLabel}</span>
-                      </span>
-                      {isSelected && <span className="text-xs font-bold">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Currency Selector Dropdown (Desktop / Tablet) */}
-          <div className="relative hidden sm:block" ref={currMenuRef}>
-            <button
-              type="button"
-              id="curr-selector-btn"
-              data-testid="store-currency-badge"
-              onClick={() => {
-                setCurrMenuOpen((prev) => !prev);
-                setLangMenuOpen(false);
-              }}
-              aria-label={`Selected currency: ${CURRENCIES[currency].label}. Click to switch.`}
-              aria-expanded={currMenuOpen}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#384A22]/10 hover:bg-[#384A22]/20 border border-[#384A22]/25 text-[#384A22] text-[13px] font-bold tracking-wide transition-all cursor-pointer select-none"
-            >
-              <span>{CURRENCIES[currency].label}</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${
-                  currMenuOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {currMenuOpen && (
-              <div
-                role="menu"
-                aria-orientation="vertical"
-                aria-labelledby="curr-selector-btn"
-                className="absolute right-0 top-full mt-2 w-48 bg-[#F2F0E3] rounded-2xl shadow-2xl border border-[#384A22]/20 py-2 z-50 backdrop-blur-md overflow-hidden"
-              >
-                <div className="px-3.5 py-1 text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider border-b border-[#384A22]/10 mb-1">
-                  {t('curr_select_title')}
-                </div>
-                {(Object.keys(CURRENCIES) as Currency[]).map((currKey) => {
-                  const item = CURRENCIES[currKey];
-                  const isSelected = currency === currKey;
-                  return (
-                    <button
-                      key={currKey}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setCurrency(currKey);
-                        setCurrMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#384A22] text-[#F2F0E3] font-bold'
-                          : 'text-[#384A22] hover:bg-[#384A22]/10 font-medium'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="font-bold">{item.code}</span>
-                        <span className="text-xs opacity-75">({item.symbol})</span>
                       </span>
                       {isSelected && <span className="text-xs font-bold">✓</span>}
                     </button>
@@ -712,35 +643,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span className="text-sm leading-none">{item.flag}</span>
                       <span>{item.nativeLabel}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Currency Switcher */}
-            <div>
-              <div className="text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider mb-2 flex items-center justify-between">
-                <span>{t('curr_select_title')}</span>
-                <span className="text-[11px] font-medium text-[#384A22]/70">{CURRENCIES[currency].label}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.keys(CURRENCIES) as Currency[]).map((currKey) => {
-                  const item = CURRENCIES[currKey];
-                  const isSelected = currency === currKey;
-                  return (
-                    <button
-                      key={currKey}
-                      type="button"
-                      onClick={() => setCurrency(currKey)}
-                      className={`py-2 px-1 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#384A22] text-[#F2F0E3] shadow-sm'
-                          : 'bg-white text-[#384A22] border border-[#384A22]/20 hover:bg-[#384A22]/5'
-                      }`}
-                    >
-                      <span>{item.code}</span>
-                      <span className="opacity-75">({item.symbol})</span>
                     </button>
                   );
                 })}

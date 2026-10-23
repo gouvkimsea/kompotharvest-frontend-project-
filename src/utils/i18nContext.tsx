@@ -405,13 +405,10 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return 'EN';
   });
 
-  // Load persisted currency or default to 'USD'
+  // Default currency is USD ($)
   const [currency, setCurrencyState] = useState<Currency>(() => {
     try {
-      const saved = localStorage.getItem('kampot_curr') as Currency;
-      if (saved && (saved === 'USD' || saved === 'KHR' || saved === 'INR')) {
-        return saved;
-      }
+      localStorage.setItem('kampot_curr', 'USD');
     } catch {}
     return 'USD';
   });
