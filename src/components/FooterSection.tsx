@@ -1,6 +1,7 @@
 import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 interface FooterSectionProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
@@ -15,6 +16,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
   onSelectProduct,
   onAddProductToCart,
 }) => {
+  const { t, formatPrice } = useI18n();
   return (
     <footer className="w-full bg-[#F2F0E3] overflow-hidden">
       {/* PART 1: ARTISAN CASHEW COLLECTION SHOWCASE (Clean, spacious, uncrowded) */}
@@ -89,10 +91,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
 
                     <div className="mt-4 pt-3 border-t border-[#384A22]/10 flex items-center justify-center gap-2">
                       <span className="text-2xl font-bold text-[#384A22]">
-                        ${prod.price.toFixed(2)}
-                      </span>
-                      <span className="text-xs text-[#384A22]/60 uppercase tracking-wide">
-                        USD
+                        {formatPrice(prod.price)}
                       </span>
                     </div>
                   </div>
@@ -113,9 +112,9 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                       }}
                       className="w-full py-3 rounded-full bg-[#384A22] text-[#F2F0E3] font-medium text-sm group-hover:bg-[#8B6D3B] transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                     >
-                      <span>Add to Bag</span>
+                      <span>{t('btn_add_to_cart')}</span>
                       <span className="text-sm">·</span>
-                      <span>${prod.price.toFixed(2)}</span>
+                      <span>{formatPrice(prod.price)}</span>
                     </button>
                   </div>
                 </div>

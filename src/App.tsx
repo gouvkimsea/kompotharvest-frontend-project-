@@ -18,8 +18,10 @@ import {
 import { AiSommelierModal } from './components/AiSommelierModal';
 import { BundleItem, Product, RecipeItem } from './data/botenzData';
 import { CartItem, calculateCartSummary } from './utils/storeLogic';
+import { useI18n } from './utils/i18nContext';
 
 export default function App() {
+  const { t } = useI18n();
   const [activePage, setActivePage] = useState<ActivePage>('home');
   const [shopCategory, setShopCategory] = useState<string>('powders');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -263,7 +265,7 @@ export default function App() {
             onClick={() => setIsCartOpen(true)}
             className="underline text-[#9AB87A] font-bold cursor-pointer"
           >
-            View Bag
+            {t('cart_view_bag')}
           </button>
         </div>
       )}
@@ -331,7 +333,7 @@ export default function App() {
           className="group flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#384A22] hover:bg-[#314B1C] text-[#F2F0E3] shadow-xl hover:shadow-2xl border border-[#8B6D3B]/40 transition-all duration-300 hover:scale-105 cursor-pointer"
         >
           <span className="w-2.5 h-2.5 rounded-full bg-[#C9A352] animate-ping" />
-          <span className="font-bold text-sm tracking-wide">✨ Ask AI Sommelier</span>
+          <span className="font-bold text-sm tracking-wide">✨ {t('btn_ask_ai')}</span>
         </button>
       </div>
     </div>

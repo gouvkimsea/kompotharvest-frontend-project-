@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, X, Send, Bot, User, Check, ShoppingBag } from 'lucide-react';
 import { Product, PRODUCTS } from '../data/botenzData';
+import { useI18n } from '../utils/i18nContext';
 
 interface AiSommelierModalProps {
   isOpen: boolean;
@@ -27,6 +28,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
   onClose,
   onAddToCart,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -166,7 +168,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
                           {m.suggestedProduct.name}
                         </div>
                         <div className="text-[11px] text-[#768E5C] font-semibold">
-                          ${m.suggestedProduct.price.toFixed(2)} USD
+                          {formatPrice(m.suggestedProduct.price)}
                         </div>
                       </div>
                     </div>
@@ -178,11 +180,11 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
                     >
                       {addedProductId === m.suggestedProduct.id ? (
                         <>
-                          <Check className="w-3.5 h-3.5" /> Added!
+                          <Check className="w-3.5 h-3.5" /> {t('btn_added')}
                         </>
                       ) : (
                         <>
-                          <ShoppingBag className="w-3.5 h-3.5" /> Add
+                          <ShoppingBag className="w-3.5 h-3.5" /> {t('btn_add_to_cart')}
                         </>
                       )}
                     </button>

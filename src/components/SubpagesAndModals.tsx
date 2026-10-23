@@ -18,11 +18,11 @@ import {
   CURRENCY_SYMBOL,
   calculateCartSummary,
   calculateNutritionSaving,
-  formatUSD,
   validateCheckoutForm,
 } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 /* ============================================================================
  * 1. SHOP PAGE VIEW (matches ref-shop.png)
@@ -42,6 +42,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
   onSelectProduct,
   onSelectBundle,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [activeTab, setActiveTab] = useState<'powders' | 'bundles' | 'accessories' | 'soon'>(
     (initialCategory as 'powders' | 'bundles' | 'accessories' | 'soon') || 'powders'
   );
@@ -71,23 +72,23 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
       {/* Header Title + Pill Switcher */}
       <div className="max-w-[1440px] mx-auto px-4 text-center">
         <h1 className="font-display text-[42px] sm:text-[54px] lg:text-[62px] tracking-tight leading-tight">
-          <span className="text-[#768E5C] font-normal">Explore </span>
-          <span className="text-[#384A22] font-normal">Artisan Roasted Cashews</span>
+          <span className="text-[#768E5C] font-normal">{t('explore_cashews').split(' ')[0]} </span>
+          <span className="text-[#384A22] font-normal">{t('explore_cashews').split(' ').slice(1).join(' ') || t('explore_cashews')}</span>
         </h1>
         <p className="mt-2 text-[15px] sm:text-[17px] font-medium text-[#384A22]/85">
-          Flavors: <span className="font-bold text-[#384A22]">Honey Butter</span> &amp;{' '}
-          <span className="font-bold text-[#384A22]">Chili Lime</span> · Package Sizes:{' '}
-          <span className="font-bold text-[#384A22]">100g Pouch (USD 10)</span> &amp;{' '}
-          <span className="font-bold text-[#384A22]">250g Jar (USD 20)</span>
+          {t('flavors_title')}: <span className="font-bold text-[#384A22]">{t('flavor_honey_butter')}</span> &amp;{' '}
+          <span className="font-bold text-[#384A22]">{t('flavor_chili_lime')}</span> · Package Sizes:{' '}
+          <span className="font-bold text-[#384A22]">{t('size_pouch_100')} ({formatPrice(10)})</span> &amp;{' '}
+          <span className="font-bold text-[#384A22]">{t('size_jar_250')} ({formatPrice(20)})</span>
         </p>
 
         {/* White Pill Segmented Switcher (All Products | Bundles | 250g Jar | 100g Pouch) */}
         <div className="mt-7 inline-flex flex-wrap items-center justify-center bg-[#F7F5E9] rounded-full p-1.5 shadow-sm border border-[#384A22]/10">
           {[
-            { id: 'powders', label: 'All Sizes & Flavors (4)' },
-            { id: 'bundles', label: 'Bundles' },
-            { id: 'accessories', label: '250g Jar ($20)' },
-            { id: 'soon', label: '100g Pouch ($10)' },
+            { id: 'powders', label: t('cat_all') },
+            { id: 'bundles', label: t('cat_bundles') },
+            { id: 'accessories', label: `${t('size_jar_250')} (${formatPrice(20)})` },
+            { id: 'soon', label: `${t('size_pouch_100')} (${formatPrice(10)})` },
           ].map((tab) => {
             const isActive = activeTab === tab.id;
             return (
@@ -149,10 +150,10 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                     <h3 className="text-[18px] font-medium text-[#F2F0E3]">{bundle.name}</h3>
                     <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
                       <span className="text-[24px] font-normal text-[#F2F0E3]">
-                        {formatUSD(bundle.price)}
+                        {formatPrice(bundle.price)}
                       </span>
                       <span className="text-[14px] text-[#8B6D3B] line-through">
-                        {formatUSD(bundle.originalPrice)}
+                        {formatPrice(bundle.originalPrice)}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3]">
                         <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
@@ -167,7 +168,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         onClick={() => onAddBundleToCart(bundle)}
                         className="flex-1 py-2.5 px-5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer"
                       >
-                        Add to cart
+                        {t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"
@@ -219,11 +220,11 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
 
                     <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
                       <span className="text-[23px] font-semibold text-[#F2F0E3]">
-                        {formatUSD(product.price)}
+                        {formatPrice(product.price)}
                       </span>
                       {product.originalPrice > product.price && (
                         <span className="text-[13.5px] text-[#8B6D3B] line-through">
-                          {formatUSD(product.originalPrice)}
+                          {formatPrice(product.originalPrice)}
                         </span>
                       )}
                       <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3] ml-1">
@@ -240,7 +241,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         onClick={() => onAddProductToCart(product)}
                         className="flex-1 py-2.5 px-4 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                       >
-                        Add to cart
+                        {t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"
@@ -428,6 +429,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
   onAddProductToCart,
   onNavigate,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [servingsPerWeek, setServingsPerWeek] = useState(7);
   const [selectedAutoshipFlavor, setSelectedAutoshipFlavor] = useState<Product>(PRODUCTS[0]);
   const [deliveryFrequency, setDeliveryFrequency] = useState<'30' | '45' | '60'>('30');
@@ -472,7 +474,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                     >
                       {PRODUCTS.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} ({p.flavor} · {p.packageSize}) — {formatUSD(Math.round(p.price * 0.85 * 100) / 100)} (15% Off {formatUSD(p.price)})
+                          {p.name} ({p.flavor} · {p.packageSize}) — {formatPrice(Math.round(p.price * 0.85 * 100) / 100)} (15% Off {formatPrice(p.price)})
                         </option>
                       ))}
                     </select>
@@ -506,7 +508,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                     onClick={() => onAddProductToCart(selectedAutoshipFlavor, true)}
                     className="px-9 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[16px] font-semibold shadow-md transition-colors cursor-pointer"
                   >
-                    Start Autoship — {formatUSD(Math.round(selectedAutoshipFlavor.price * 0.85 * 100) / 100)}
+                    {t('btn_start_autoship')} — {formatPrice(Math.round(selectedAutoshipFlavor.price * 0.85 * 100) / 100)}
                   </button>
                   <button
                     type="button"
@@ -656,6 +658,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onClearCart,
 }) => {
+  const { t, formatPrice, currency } = useI18n();
   const [step, setStep] = useState<'cart' | 'checkout' | 'confirmed'>('cart');
   const [promoInput, setPromoInput] = useState('');
   const [form, setForm] = useState({
@@ -733,10 +736,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <ShoppingBag className="w-5 h-5" />
             <h2 className="text-lg font-bold">
               {step === 'cart'
-                ? `Your Botenz Bag (${summary.itemCount})`
+                ? `${t('cart_title')} (${summary.itemCount})`
                 : step === 'checkout'
-                ? 'Express Delivery Checkout'
-                : 'Order Confirmed'}
+                ? t('btn_checkout')
+                : t('cart_order_confirmed')}
             </h2>
           </div>
           <button
@@ -753,10 +756,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {step === 'cart' && items.length > 0 && (
           <div className="px-6 py-3 bg-[#E5E2CE] text-xs font-semibold text-[#384A22]">
             {summary.qualifiesForFreeShipping ? (
-              <span>🎉 You unlocked FREE Glass-Safe Shipping ({STORE_CURRENCY} {CURRENCY_SYMBOL})!</span>
+              <span>🎉 {t('cart_shipping_free')}</span>
             ) : (
               <span>
-                Add {formatUSD(Math.max(0, FREE_SHIPPING_THRESHOLD - summary.subtotal))} more for FREE Shipping
+                Add {formatPrice(Math.max(0, FREE_SHIPPING_THRESHOLD - summary.subtotal))} {t('cart_shipping_add_more')}
               </span>
             )}
             <div className="w-full h-1.5 bg-[#384A22]/15 rounded-full mt-1.5 overflow-hidden">
@@ -795,21 +798,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 }}
                 className="mt-4 px-8 py-3 rounded-full bg-[#8B6D3B] text-[#F2F0E3] font-semibold text-sm cursor-pointer"
               >
-                Continue Shopping
+                {t('btn_continue_shopping')}
               </button>
             </div>
           ) : step === 'checkout' ? (
             <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">
               <div>
                 <label htmlFor="chk-name" className="block text-xs font-bold uppercase mb-1">
-                  Full Name *
+                  {t('form_full_name')} *
                 </label>
                 <input
                   id="chk-name"
                   type="text"
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
-                  placeholder="e.g. Aarav Sharma"
+                  placeholder="e.g. Sokha Chan"
                   className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
                 />
                 {formErrors.fullName && (
@@ -820,7 +823,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="chk-email" className="block text-xs font-bold uppercase mb-1">
-                    Email *
+                    {t('form_email')} *
                   </label>
                   <input
                     id="chk-email"
@@ -837,14 +840,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                 <div>
                   <label htmlFor="chk-phone" className="block text-xs font-bold uppercase mb-1">
-                    Mobile (10 digits) *
+                    {t('form_phone')} *
                   </label>
                   <input
                     id="chk-phone"
                     type="tel"
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    placeholder="9876543210"
+                    placeholder="+855 12 345 678"
                     className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.phone && (
@@ -855,14 +858,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
               <div>
                 <label htmlFor="chk-address" className="block text-xs font-bold uppercase mb-1">
-                  Street Address *
+                  {t('form_address')} *
                 </label>
                 <input
                   id="chk-address"
                   type="text"
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="House/Flat No., Building, Street"
+                  placeholder="Street, Sangkat / District"
                   className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
                 />
                 {formErrors.address && (
@@ -873,14 +876,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label htmlFor="chk-city" className="block text-xs font-bold uppercase mb-1">
-                    City *
+                    {t('form_city')} *
                   </label>
                   <input
                     id="chk-city"
                     type="text"
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
-                    placeholder="Mumbai"
+                    placeholder="Phnom Penh"
                     className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.city && (
@@ -890,14 +893,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
                 <div>
                   <label htmlFor="chk-pin" className="block text-xs font-bold uppercase mb-1">
-                    PIN Code *
+                    {t('form_postal')} *
                   </label>
                   <input
                     id="chk-pin"
                     type="text"
                     value={form.pincode}
                     onChange={(e) => setForm({ ...form, pincode: e.target.value })}
-                    placeholder="400050"
+                    placeholder="12000"
                     className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.pincode && (
@@ -909,7 +912,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           ) : items.length === 0 ? (
             <div className="text-center py-16 space-y-4">
               <ShoppingBag className="w-12 h-12 text-[#384A22]/40 mx-auto" />
-              <p className="text-lg font-bold text-[#384A22]">Your Botenz cart is empty</p>
+              <p className="text-lg font-bold text-[#384A22]">{t('cart_empty')}</p>
               <p className="text-sm text-[#384A22]/75">
                 Explore our cold-pressed Peanut, Pistachio, Almond, Cashew, Sesame &amp; Cacao
                 powders.
@@ -943,13 +946,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     )}
                     <div className="mt-1 flex items-baseline gap-2 tabular-nums">
                       <span className="text-sm font-extrabold text-[#384A22]">
-                        {formatUSD(
+                        {formatPrice(
                           item.isAutoship ? Math.round(item.price * 0.85 * 100) / 100 : item.price
                         )}
                       </span>
                       {(item.originalPrice > item.price || item.isAutoship) && (
                         <span className="text-xs text-[#8B6D3B] line-through">
-                          {formatUSD(item.originalPrice)}
+                          {formatPrice(item.originalPrice)}
                         </span>
                       )}
                     </div>
@@ -995,7 +998,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     type="text"
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value)}
-                    placeholder="Use code BOTENZ15 for 15% OFF"
+                    placeholder={t('promo_code_placeholder')}
                     className="flex-1 px-3.5 py-2 rounded-full bg-white border border-[#384A22]/25 text-xs focus:outline-none"
                   />
                   <button
@@ -1003,7 +1006,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     onClick={() => onTogglePromoCode(true)}
                     className="px-4 py-2 rounded-full bg-[#384A22] text-[#F2F0E3] text-xs font-semibold cursor-pointer"
                   >
-                    {promoCodeActive ? 'Applied ✓' : 'Apply 15%'}
+                    {promoCodeActive ? 'Applied ✓' : t('btn_apply')}
                   </button>
                 </div>
               </div>
@@ -1016,24 +1019,24 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="p-6 bg-white border-t border-[#384A22]/15 space-y-3">
             <div className="space-y-1 text-sm">
               <div className="flex justify-between text-[#384A22]/80">
-                <span>Subtotal ({STORE_CURRENCY})</span>
-                <span className="tabular-nums">{formatUSD(summary.subtotal)}</span>
+                <span>{t('cart_subtotal')} ({currency})</span>
+                <span className="tabular-nums">{formatPrice(summary.subtotal)}</span>
               </div>
               {summary.promoDiscount > 0 && (
                 <div className="flex justify-between text-[#768E5C] font-semibold">
-                  <span>First Order 15% Discount</span>
-                  <span className="tabular-nums">-{formatUSD(summary.promoDiscount)}</span>
+                  <span>{t('cart_discount')}</span>
+                  <span className="tabular-nums">-{formatPrice(summary.promoDiscount)}</span>
                 </div>
               )}
               <div className="flex justify-between text-[#384A22]/80">
-                <span>Shipping</span>
+                <span>{t('cart_shipping')}</span>
                 <span className="tabular-nums">
-                  {summary.shippingFee === 0 ? 'FREE' : formatUSD(summary.shippingFee)}
+                  {summary.shippingFee === 0 ? 'FREE' : formatPrice(summary.shippingFee)}
                 </span>
               </div>
               <div className="flex justify-between text-lg font-extrabold text-[#384A22] pt-2 border-t border-[#384A22]/10">
-                <span>Total ({STORE_CURRENCY})</span>
-                <span className="tabular-nums">{formatUSD(summary.total)}</span>
+                <span>{t('cart_total')} ({currency})</span>
+                <span className="tabular-nums">{formatPrice(summary.total)}</span>
               </div>
             </div>
 
@@ -1043,7 +1046,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 onClick={() => setStep('checkout')}
                 className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-base shadow-md transition-colors cursor-pointer"
               >
-                Proceed to Checkout
+                {t('btn_checkout')}
               </button>
             ) : (
               <div className="flex gap-2.5">
@@ -1052,7 +1055,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   onClick={() => setStep('cart')}
                   className="px-5 py-3.5 rounded-full border border-[#384A22] text-[#384A22] text-sm font-semibold cursor-pointer"
                 >
-                  Back
+                  {t('btn_back')}
                 </button>
                 <button
                   type="submit"
@@ -1060,7 +1063,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   disabled={isSubmittingOrder}
                   className="flex-1 py-3.5 rounded-full bg-[#384A22] hover:bg-[#314B1C] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
                 >
-                  {isSubmittingOrder ? 'Processing Order...' : `Place Order (${formatUSD(summary.total)})`}
+                  {isSubmittingOrder ? t('btn_processing') : `${t('btn_place_order')} (${formatPrice(summary.total)})`}
                 </button>
               </div>
             )}
@@ -1089,6 +1092,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onAddProductToCart,
   onAddBundleToCart,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [isAutoship, setIsAutoship] = useState(false);
 
@@ -1144,10 +1148,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               <div className="flex items-baseline gap-3 mb-4 tabular-nums">
                 <span className="text-2xl font-extrabold text-[#384A22]">
-                  {formatUSD(bundle.price)}
+                  {formatPrice(bundle.price)}
                 </span>
                 <span className="text-sm text-[#8B6D3B] line-through">
-                  {formatUSD(bundle.originalPrice)}
+                  {formatPrice(bundle.originalPrice)}
                 </span>
               </div>
 
@@ -1159,7 +1163,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
                 className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
               >
-                Add Bundle to Cart — Save 25%
+                {t('btn_add_to_cart')} — Save 25%
               </button>
             </div>
           </div>
@@ -1221,7 +1225,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {product!.variants && product!.variants.length > 0 && (
               <div>
                 <span className="block text-xs font-bold uppercase tracking-wider mb-2">
-                  Package Size (100g Pouch: USD 10 · 250g Jar: USD 20):
+                  Package Size:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {product!.variants.map((v, i) => (
@@ -1235,7 +1239,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           : 'bg-white text-[#384A22] border border-[#384A22]/25'
                       }`}
                     >
-                      {v.label} — {formatUSD(v.price)}
+                      {v.label} — {formatPrice(v.price)}
                     </button>
                   ))}
                 </div>
@@ -1292,11 +1296,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="flex items-center justify-between pt-2">
               <div className="flex items-baseline gap-2.5 tabular-nums">
                 <span className="text-2xl font-extrabold text-[#384A22]">
-                  {formatUSD(isAutoship ? Math.round(activePrice * 0.85 * 100) / 100 : activePrice)}
+                  {formatPrice(isAutoship ? Math.round(activePrice * 0.85 * 100) / 100 : activePrice)}
                 </span>
                 {(activeOrigPrice > activePrice || isAutoship) && (
                   <span className="text-sm text-[#8B6D3B] line-through">
-                    {formatUSD(activeOrigPrice)}
+                    {formatPrice(activeOrigPrice)}
                   </span>
                 )}
               </div>
@@ -1314,7 +1318,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
                 className="px-8 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
               >
-                Add to Cart
+                {t('btn_add_to_cart')}
               </button>
             </div>
           </div>

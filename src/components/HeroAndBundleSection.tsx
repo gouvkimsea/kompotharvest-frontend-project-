@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ASSETS, BUNDLES, BundleItem, HERO_FEATURES, HERO_STATS } from '../data/botenzData';
-import { formatUSD } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 interface HeroAndBundleProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
@@ -64,6 +64,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
   onSelectBundleDetail,
   onClaimOffer,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
   const [bundleOrder, setBundleOrder] = useState<number[]>([0, 1, 2]);
 
@@ -349,10 +350,10 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
 
                     <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
                       <span className="text-[24px] font-medium text-[#F2F0E3]">
-                        {formatUSD(bundle.price)}
+                        {formatPrice(bundle.price)}
                       </span>
                       <span className="text-[14px] text-[#8B6D3B] line-through font-medium">
-                        {formatUSD(bundle.originalPrice)}
+                        {formatPrice(bundle.originalPrice)}
                       </span>
                       <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3]/90 ml-1">
                         <svg className="w-4 h-4 text-[#EAB308] fill-current" viewBox="0 0 20 20">
@@ -368,7 +369,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                         onClick={() => onAddBundleToCart(bundle)}
                         className="flex-1 py-2.5 px-5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[14px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                       >
-                        Add to Cart
+                        {t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
-import { formatUSD } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 interface ComparisonAndProductsProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
@@ -37,6 +37,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
   onAddProductToCart,
   onSelectProduct,
 }) => {
+  const { t, formatPrice } = useI18n();
   const [carouselOffset, setCarouselOffset] = useState(0);
 
   // Show 4 products at a time on desktop, with option to cycle through all 6
@@ -256,11 +257,11 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
 
                   <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
                     <span className="text-[22px] font-semibold text-[#384A22]">
-                      {formatUSD(product.price)}
+                      {formatPrice(product.price)}
                     </span>
                     {product.originalPrice > product.price && (
                       <span className="text-[13px] text-[#8B6D3B] line-through">
-                        {formatUSD(product.originalPrice)}
+                        {formatPrice(product.originalPrice)}
                       </span>
                     )}
                     <span className="inline-flex items-center gap-1 text-[12.5px] text-[#384A22] ml-1">
@@ -277,7 +278,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                       onClick={() => onAddProductToCart(product)}
                       className="flex-[1.3] py-3.5 px-4 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      Add to cart
+                      {t('btn_add_to_cart')}
                     </button>
                     <button
                       type="button"

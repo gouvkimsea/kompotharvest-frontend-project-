@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe } from 'lucide-react';
 import { ASSETS } from '../data/botenzData';
-import { formatUSD, STORE_CURRENCY, CURRENCY_SYMBOL } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
+import { useI18n, LANGUAGES, CURRENCIES, Language, Currency } from '../utils/i18nContext';
 
 export type ActivePage = 'home' | 'shop' | 'way' | 'autoship' | 'recipes' | 'rewards';
 
@@ -57,9 +57,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCart,
   onOpenDiscountModal,
 }) => {
+  const { language, setLanguage, currency, setCurrency, t, formatPrice } = useI18n();
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [currMenuOpen, setCurrMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
+  const langMenuRef = useRef<HTMLDivElement | null>(null);
+  const currMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (langMenuRef.current && !langMenuRef.current.contains(event.target as Node)) {
+        setLangMenuOpen(false);
+      }
+      if (currMenuRef.current && !currMenuRef.current.contains(event.target as Node)) {
+        setCurrMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
 
   const handleMouseEnter = (menu: 'shop' | 'way') => {
     if (closeTimeoutRef.current) {
@@ -84,16 +104,18 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleNavClick = (page: ActivePage, categoryFilter?: string) => {
     setOpenDropdown(null);
     setMobileMenuOpen(false);
+    setLangMenuOpen(false);
+    setCurrMenuOpen(false);
     onNavigate(page, categoryFilter);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <header
-      className="sticky top-0 z-40 w-full bg-[#F2F0E3]/95 backdrop-blur-sm transition-colors"
+      className="sticky top-0 z-40 w-full bg-[#F2F0E3]/95 backdrop-blur-sm transition-colors border-b border-[#384A22]/10"
       onMouseLeave={handleMouseLeave}
     >
-      <div className="max-w-[1440px] mx-auto px-6 lg:px-16 h-[84px] flex items-center justify-between gap-8">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 h-[84px] flex items-center justify-between gap-4 lg:gap-8">
         {/* Zone 1: Brand Wordmark / Logo */}
         <a
           href="#top"
@@ -104,13 +126,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="shrink-0 focus:outline-none"
           aria-label="Home"
         >
-          <BotenzLogo variant="green" className="h-[66px] w-auto object-contain" />
+          <BotenzLogo variant="green" className="h-[58px] sm:h-[66px] w-auto object-contain" />
         </a>
 
         {/* Zone 2: Primary Navigation Links */}
         <nav
           aria-label="Menu"
-          className="hidden md:flex items-center gap-9 text-[16px] font-normal text-[#384A22]"
+          className="hidden md:flex items-center gap-6 lg:gap-9 text-[15px] lg:text-[16px] font-normal text-[#384A22]"
         >
           {/* Shop item with Mega Menu */}
           <div
@@ -123,15 +145,15 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-expanded={openDropdown === 'shop'}
               className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
                 activePage === 'shop' || openDropdown === 'shop'
-                  ? 'border-b-[1.5px] border-[#384A22] font-medium'
+                  ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                   : 'hover:text-[#768E5C]'
               }`}
             >
-              Shop
+              {t('nav_shop')}
             </button>
           </div>
 
-          {/* The Botenz Way item with Mega Menu */}
+          {/* The Kampot Way item with Mega Menu */}
           <div
             className="relative py-6"
             onMouseEnter={() => handleMouseEnter('way')}
@@ -142,11 +164,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-expanded={openDropdown === 'way'}
               className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
                 activePage === 'way' || openDropdown === 'way'
-                  ? 'border-b-[1.5px] border-[#384A22] font-medium'
+                  ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                   : 'hover:text-[#768E5C]'
               }`}
             >
-              The Botenz Way
+              {t('nav_way')}
             </button>
           </div>
 
@@ -156,11 +178,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => handleNavClick('autoship')}
             className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
               activePage === 'autoship'
-                ? 'border-b-[1.5px] border-[#384A22] font-medium'
+                ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                 : 'hover:text-[#768E5C]'
             }`}
           >
-            Autoship &amp; Save
+            {t('nav_autoship')}
           </button>
 
           {/* Recipes */}
@@ -169,34 +191,151 @@ export const Navbar: React.FC<NavbarProps> = ({
             onClick={() => handleNavClick('recipes')}
             className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
               activePage === 'recipes'
-                ? 'border-b-[1.5px] border-[#384A22] font-medium'
+                ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                 : 'hover:text-[#768E5C]'
             }`}
           >
-            Recipes
+            {t('nav_recipes')}
           </button>
         </nav>
 
-        {/* Zone 3: Store Currency (USD $) & Primary Cart Action */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div
-            data-testid="store-currency-badge"
-            aria-label={`Store currency: ${STORE_CURRENCY} (${CURRENCY_SYMBOL})`}
-            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#384A22]/10 border border-[#384A22]/25 text-[#384A22] text-[13px] font-bold tracking-wide select-none"
-          >
-            <span>{STORE_CURRENCY} ({CURRENCY_SYMBOL})</span>
+        {/* Zone 3: Functional Controls (Language, Currency) & Cart Action */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Language Selector Dropdown (Desktop / Tablet) */}
+          <div className="relative hidden sm:block" ref={langMenuRef}>
+            <button
+              type="button"
+              id="lang-selector-btn"
+              onClick={() => {
+                setLangMenuOpen((prev) => !prev);
+                setCurrMenuOpen(false);
+              }}
+              aria-label={`Selected language: ${LANGUAGES[language].label}. Click to switch.`}
+              aria-expanded={langMenuOpen}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#384A22]/10 hover:bg-[#384A22]/20 border border-[#384A22]/25 text-[#384A22] text-[13px] font-bold tracking-wide transition-all cursor-pointer select-none"
+            >
+              <span className="text-sm leading-none">{LANGUAGES[language].flag}</span>
+              <span className="font-semibold">{language}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${
+                  langMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {langMenuOpen && (
+              <div
+                role="menu"
+                aria-orientation="vertical"
+                aria-labelledby="lang-selector-btn"
+                className="absolute right-0 top-full mt-2 w-44 bg-[#F2F0E3] rounded-2xl shadow-2xl border border-[#384A22]/20 py-2 z-50 backdrop-blur-md overflow-hidden"
+              >
+                <div className="px-3.5 py-1 text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider border-b border-[#384A22]/10 mb-1">
+                  {t('lang_select_title')}
+                </div>
+                {(Object.keys(LANGUAGES) as Language[]).map((langKey) => {
+                  const item = LANGUAGES[langKey];
+                  const isSelected = language === langKey;
+                  return (
+                    <button
+                      key={langKey}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setLanguage(langKey);
+                        setLangMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#384A22] text-[#F2F0E3] font-bold'
+                          : 'text-[#384A22] hover:bg-[#384A22]/10 font-medium'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span className="text-base leading-none">{item.flag}</span>
+                        <span>{item.nativeLabel}</span>
+                      </span>
+                      {isSelected && <span className="text-xs font-bold">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
+          {/* Currency Selector Dropdown (Desktop / Tablet) */}
+          <div className="relative hidden sm:block" ref={currMenuRef}>
+            <button
+              type="button"
+              id="curr-selector-btn"
+              data-testid="store-currency-badge"
+              onClick={() => {
+                setCurrMenuOpen((prev) => !prev);
+                setLangMenuOpen(false);
+              }}
+              aria-label={`Selected currency: ${CURRENCIES[currency].label}. Click to switch.`}
+              aria-expanded={currMenuOpen}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#384A22]/10 hover:bg-[#384A22]/20 border border-[#384A22]/25 text-[#384A22] text-[13px] font-bold tracking-wide transition-all cursor-pointer select-none"
+            >
+              <span>{CURRENCIES[currency].label}</span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${
+                  currMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+
+            {currMenuOpen && (
+              <div
+                role="menu"
+                aria-orientation="vertical"
+                aria-labelledby="curr-selector-btn"
+                className="absolute right-0 top-full mt-2 w-48 bg-[#F2F0E3] rounded-2xl shadow-2xl border border-[#384A22]/20 py-2 z-50 backdrop-blur-md overflow-hidden"
+              >
+                <div className="px-3.5 py-1 text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider border-b border-[#384A22]/10 mb-1">
+                  {t('curr_select_title')}
+                </div>
+                {(Object.keys(CURRENCIES) as Currency[]).map((currKey) => {
+                  const item = CURRENCIES[currKey];
+                  const isSelected = currency === currKey;
+                  return (
+                    <button
+                      key={currKey}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setCurrency(currKey);
+                        setCurrMenuOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#384A22] text-[#F2F0E3] font-bold'
+                          : 'text-[#384A22] hover:bg-[#384A22]/10 font-medium'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <span className="font-bold">{item.code}</span>
+                        <span className="text-xs opacity-75">({item.symbol})</span>
+                      </span>
+                      {isSelected && <span className="text-xs font-bold">✓</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Primary Cart Action */}
           <button
             type="button"
             onClick={onOpenCart}
-            aria-label={`Shopping Cart with ${cartCount} items, total ${formatUSD(cartTotal)}`}
-            className="inline-flex items-center justify-center gap-2.5 px-5 py-2.5 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer min-w-[116px] h-[48px]"
+            aria-label={`Shopping Cart with ${cartCount} items, total ${formatPrice(cartTotal)}`}
+            className="inline-flex items-center justify-center gap-2 px-3.5 sm:px-5 py-2 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer min-w-[105px] sm:min-w-[116px] h-[44px] sm:h-[48px]"
           >
             {/* Custom Basket Icon matching Botenz header */}
             <svg
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               viewBox="0 0 24 24"
               fill="currentColor"
               className="shrink-0"
@@ -204,8 +343,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <path d="M5.5 10L8.5 4.5C8.8 4 9.5 3.8 10 4.1C10.5 4.4 10.7 5.1 10.4 5.6L8 10H16L13.6 5.6C13.3 5.1 13.5 4.4 14 4.1C14.5 3.8 15.2 4 15.5 4.5L18.5 10H21C21.6 10 22 10.4 22 11V12C22 12.5 21.6 12.9 21.1 13L19.6 19.4C19.3 20.4 18.4 21 17.4 21H6.6C5.6 21 4.7 20.4 4.4 19.4L2.9 13C2.4 12.9 2 12.5 2 12V11C2 10.4 2.4 10 3 10H5.5ZM9 15.5C9 14.7 8.3 14 7.5 14C6.7 14 6 14.7 6 15.5C6 16.3 6.7 17 7.5 17C8.3 17 9 16.3 9 15.5ZM13.5 15.5C13.5 14.7 12.8 14 12 14C11.2 14 10.5 14.7 10.5 15.5C10.5 16.3 11.2 17 12 17C12.8 17 13.5 16.3 13.5 15.5ZM18 15.5C18 14.7 17.3 14 16.5 14C15.7 14 15 14.7 15 15.5C15 16.3 15.7 17 16.5 17C17.3 17 18 16.3 18 15.5Z" />
             </svg>
-            <span className="text-[15px] font-semibold tabular-nums">
-              {cartCount} · {formatUSD(cartTotal)}
+            <span className="text-[14px] sm:text-[15px] font-semibold tabular-nums">
+              {cartCount} · {formatPrice(cartTotal)}
             </span>
           </button>
 
@@ -214,7 +353,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label={mobileMenuOpen ? 'Close navigation menu' : 'Open navigation menu'}
-            className="md:hidden p-2.5 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors"
+            className="md:hidden p-2.5 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer"
           >
             {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -238,7 +377,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => handleNavClick('shop', 'powders')}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    New<br />Arrivals
+                    {t('nav_new_arrivals')}
                   </button>
                 </li>
                 <li>
@@ -247,7 +386,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => handleNavClick('shop', 'bundles')}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    Variety<br />Packs
+                    {t('nav_variety_packs')}
                   </button>
                 </li>
                 <li>
@@ -256,7 +395,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => handleNavClick('way')}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    Find In<br />Store
+                    {t('nav_way')}
                   </button>
                 </li>
                 <li>
@@ -265,7 +404,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => handleNavClick('shop', 'accessories')}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    Gift Cards
+                    {t('nav_gifts_extras')}
                   </button>
                 </li>
                 <li>
@@ -274,7 +413,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onClick={() => handleNavClick('rewards')}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    Last<br />Chance<br />Savings
+                    {t('nav_rewards')}
                   </button>
                 </li>
                 <li>
@@ -286,7 +425,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     className="text-left hover:text-[#8B6D3B] transition-colors leading-tight cursor-pointer"
                   >
-                    Gift $20,<br />Get $20
+                    {t('nav_gift_reward')}
                   </button>
                 </li>
               </ul>
@@ -296,7 +435,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => handleNavClick('shop', 'powders')}
                 className="mt-4 w-[110px] py-2.5 rounded-full border-2 border-[#384A22] text-[#384A22] text-[13px] font-extrabold uppercase leading-tight hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer"
               >
-                SHOP<br />ALL
+                {t('nav_shop_all')}
               </button>
             </div>
 
@@ -316,10 +455,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="w-[48%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] leading-snug mb-1.5">
-                    Botenz Bundles
+                    {t('cat_bundles')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    A few favorites, packed together
+                    {t('nav_bundles_discount')}
                   </p>
                 </div>
               </button>
@@ -332,16 +471,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="w-[52%] h-full overflow-hidden">
                   <SmartImage
                     src={ASSETS.megaShopSachets}
-                    alt="Shake Saches"
+                    alt="Shake Sachets"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <div className="w-[48%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] leading-snug mb-1.5">
-                    Shake Saches
+                    {t('cat_pouches')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    Shake / Snack in any time
+                    {t('flavors_title')}
                   </p>
                 </div>
               </button>
@@ -354,16 +493,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="w-[52%] h-full overflow-hidden">
                   <SmartImage
                     src={ASSETS.megaShopPowders}
-                    alt="All Nut Butter Powders"
+                    alt="All Artisan Cashews"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <div className="w-[48%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] leading-snug mb-1.5">
-                    All Nut Butter Powders
+                    {t('cat_jars')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    Explore every flavor
+                    {t('cat_all')}
                   </p>
                 </div>
               </button>
@@ -382,10 +521,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="w-[48%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] leading-snug mb-1.5">
-                    Gifts &amp; Extras
+                    {t('nav_gifts_extras')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    Small touches for everyday use
+                    {t('nav_gifts_extras_desc')}
                   </p>
                 </div>
               </button>
@@ -407,13 +546,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="p-4 flex-1 flex flex-col justify-center">
                   <h3 className="text-[17px] font-extrabold text-[#384A22] leading-snug mb-2">
-                    Can’t Choose? Get Them All
+                    {t('nav_cant_choose')}
                   </h3>
                   <p className="text-[12px] font-bold text-[#555555] mb-1">
-                    Full Botenz Bundle
+                    {t('cat_bundles')}
                   </p>
                   <p className="text-[12px] text-[#666666] leading-relaxed">
-                    All our jars, in one easy bundle for anyone who wants to try the full range.
+                    {t('nav_bundle_desc')}
                   </p>
                 </div>
               </button>
@@ -445,10 +584,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="w-[55%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] mb-1.5">
-                    About Us
+                    {t('nav_about_us')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    The Pride of Kampot, Roasted to Perfection.
+                    {t('nav_about_desc')}
                   </p>
                 </div>
               </button>
@@ -461,16 +600,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="w-[45%] h-full overflow-hidden">
                   <SmartImage
                     src={ASSETS.megaWayQuality}
-                    alt="Product Quility"
+                    alt="Product Quality"
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <div className="w-[55%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] mb-1.5">
-                    Product Quility
+                    {t('nav_product_quality')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    Natural taste, planet-first!
+                    {t('nav_quality_desc')}
                   </p>
                 </div>
               </button>
@@ -489,10 +628,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="w-[55%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] mb-1.5">
-                    Why Glass
+                    {t('nav_why_glass')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    For health, taste, and planet care.
+                    {t('nav_glass_desc')}
                   </p>
                 </div>
               </button>
@@ -511,10 +650,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="w-[55%] p-3.5 flex flex-col justify-center">
                   <h3 className="text-[15px] font-extrabold text-[#384A22] mb-1.5">
-                    Our Eco Events
+                    {t('nav_eco_events')}
                   </h3>
                   <p className="text-[12px] text-[#666666] font-medium leading-relaxed">
-                    Learning through environmental care
+                    {t('nav_eco_desc')}
                   </p>
                 </div>
               </button>
@@ -535,7 +674,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="p-4 flex items-center justify-between bg-[#384A22] text-white">
                   <span className="text-[13px] font-extrabold uppercase tracking-wide text-center flex-1 leading-tight">
-                    SHOP<br />SPECIAL<br />EDITION
+                    {t('nav_shop_special')}
                   </span>
                   <span className="text-lg">→</span>
                 </div>
@@ -547,42 +686,106 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Mobile Drawer Menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden bg-[#F2F0E3] border-t border-[#384A22]/15 px-6 py-5 space-y-3 shadow-xl">
-          <button
-            type="button"
-            onClick={() => handleNavClick('shop', 'powders')}
-            className="block w-full text-left py-2.5 text-lg font-bold text-[#384A22] border-b border-[#384A22]/10"
-          >
-            Shop All Products
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick('shop', 'bundles')}
-            className="block w-full text-left py-2.5 text-lg font-bold text-[#384A22] border-b border-[#384A22]/10"
-          >
-            Botenz Bundles (25% OFF)
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick('way')}
-            className="block w-full text-left py-2.5 text-lg font-bold text-[#384A22] border-b border-[#384A22]/10"
-          >
-            The Botenz Way
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick('autoship')}
-            className="block w-full text-left py-2.5 text-lg font-bold text-[#384A22] border-b border-[#384A22]/10"
-          >
-            Autoship &amp; Save
-          </button>
-          <button
-            type="button"
-            onClick={() => handleNavClick('recipes')}
-            className="block w-full text-left py-2.5 text-lg font-bold text-[#384A22]"
-          >
-            Recipes
-          </button>
+        <div className="md:hidden bg-[#F2F0E3] border-t border-[#384A22]/15 px-5 py-5 space-y-4 shadow-2xl">
+          {/* Mobile Language & Currency Switcher Panel */}
+          <div className="bg-[#FAF8F2] rounded-2xl p-4 border border-[#384A22]/15 space-y-3.5">
+            {/* Language Switcher */}
+            <div>
+              <div className="text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>{t('lang_select_title')}</span>
+                <span className="text-[11px] font-medium text-[#384A22]/70">{LANGUAGES[language].label}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(LANGUAGES) as Language[]).map((langKey) => {
+                  const item = LANGUAGES[langKey];
+                  const isSelected = language === langKey;
+                  return (
+                    <button
+                      key={langKey}
+                      type="button"
+                      onClick={() => setLanguage(langKey)}
+                      className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#384A22] text-[#F2F0E3] shadow-sm'
+                          : 'bg-white text-[#384A22] border border-[#384A22]/20 hover:bg-[#384A22]/5'
+                      }`}
+                    >
+                      <span className="text-sm leading-none">{item.flag}</span>
+                      <span>{item.nativeLabel}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Currency Switcher */}
+            <div>
+              <div className="text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider mb-2 flex items-center justify-between">
+                <span>{t('curr_select_title')}</span>
+                <span className="text-[11px] font-medium text-[#384A22]/70">{CURRENCIES[currency].label}</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {(Object.keys(CURRENCIES) as Currency[]).map((currKey) => {
+                  const item = CURRENCIES[currKey];
+                  const isSelected = currency === currKey;
+                  return (
+                    <button
+                      key={currKey}
+                      type="button"
+                      onClick={() => setCurrency(currKey)}
+                      className={`py-2 px-1 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#384A22] text-[#F2F0E3] shadow-sm'
+                          : 'bg-white text-[#384A22] border border-[#384A22]/20 hover:bg-[#384A22]/5'
+                      }`}
+                    >
+                      <span>{item.code}</span>
+                      <span className="opacity-75">({item.symbol})</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Navigation Links */}
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={() => handleNavClick('shop', 'powders')}
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
+            >
+              {t('nav_shop_all')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavClick('shop', 'bundles')}
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
+            >
+              {t('nav_bundles_discount')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavClick('way')}
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
+            >
+              {t('nav_way')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavClick('autoship')}
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
+            >
+              {t('nav_autoship')}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavClick('recipes')}
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22]"
+            >
+              {t('nav_recipes')}
+            </button>
+          </div>
         </div>
       )}
     </header>
