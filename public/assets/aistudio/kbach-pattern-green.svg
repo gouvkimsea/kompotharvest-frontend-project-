@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="280" viewBox="0 0 280 280">
+  <defs>
+    <g id="kbach-petal-light" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M -22 -33 C -28 -58, -18 -88, 0 -114 C 18 -88, 28 -58, 22 -33" stroke-width="1.65" />
+      <path d="M 0 -36 C -13 -52, -13 -72, 0 -88 C 13 -72, 13 -52, 0 -36 Z" stroke-width="1.35" />
+      <path d="M -6 -82 C -14 -92, -10 -103, -2 -106" stroke-width="1.2" />
+      <path d="M -13 -56 C -21 -62, -22 -74, -14 -79 C -9 -82, -6 -76, -10 -73" stroke-width="1.25" />
+      <path d="M 6 -82 C 14 -92, 10 -103, 2 -106" stroke-width="1.2" />
+      <path d="M 13 -56 C 21 -62, 22 -74, 14 -79 C 9 -82, 6 -76, 10 -73" stroke-width="1.25" />
+      <path d="M -22 -35 C -36 -46, -42 -66, -32 -84 C -26 -78, -25 -68, -31 -64 C -35 -61, -39 -65, -36 -70" stroke-width="1.3" />
+      <path d="M -32 -84 C -24 -94, -14 -102, -4 -110" stroke-width="1.3" />
+      <path d="M 22 -35 C 36 -46, 42 -66, 32 -84 C 26 -78, 25 -68, 31 -64 C 35 -61, 39 -65, 36 -70" stroke-width="1.3" />
+      <path d="M 32 -84 C 24 -94, 14 -102, 4 -110" stroke-width="1.3" />
+      <path d="M -27 -44 C -36 -42, -41 -50, -35 -56 C -31 -59, -27 -55, -30 -51" stroke-width="1.15" />
+      <path d="M 27 -44 C 36 -42, 41 -50, 35 -56 C 31 -59, 27 -55, 30 -51" stroke-width="1.15" />
+      <path d="M 25 -25 L 36 -36 C 40 -40, 44 -36, 40 -32 L 29 -21" stroke-width="1.25" />
+    </g>
+
+    <g id="kbach-medallion-light" fill="none">
+      <path d="M 0 -132 L 132 0 L 0 132 L -132 0 Z" stroke-width="1.35" opacity="0.75" />
+      <path d="M 0 -124 L 124 0 L 0 124 L -124 0 Z" stroke-width="1.0" opacity="0.55" />
+
+      <use href="#kbach-petal-light" />
+      <use href="#kbach-petal-light" transform="rotate(90)" />
+      <use href="#kbach-petal-light" transform="rotate(180)" />
+      <use href="#kbach-petal-light" transform="rotate(270)" />
+
+      <circle cx="0" cy="0" r="36" stroke-width="1.6" />
+      <circle cx="0" cy="0" r="32.5" stroke-width="1.25" />
+      <circle cx="0" cy="0" r="19" stroke-width="1.4" />
+      <circle cx="0" cy="0" r="15.5" stroke-width="1.15" />
+
+      <circle cx="0" cy="-25.7" r="6.3" stroke-width="1.2" />
+      <circle cx="12.85" cy="-22.25" r="6.3" stroke-width="1.2" />
+      <circle cx="22.25" cy="-12.85" r="6.3" stroke-width="1.2" />
+      <circle cx="25.7" cy="0" r="6.3" stroke-width="1.2" />
+      <circle cx="22.25" cy="12.85" r="6.3" stroke-width="1.2" />
+      <circle cx="12.85" cy="22.25" r="6.3" stroke-width="1.2" />
+      <circle cx="0" cy="25.7" r="6.3" stroke-width="1.2" />
+      <circle cx="-12.85" cy="22.25" r="6.3" stroke-width="1.2" />
+      <circle cx="-22.25" cy="12.85" r="6.3" stroke-width="1.2" />
+      <circle cx="-25.7" cy="0" r="6.3" stroke-width="1.2" />
+      <circle cx="-22.25" cy="-12.85" r="6.3" stroke-width="1.2" />
+      <circle cx="-12.85" cy="-22.25" r="6.3" stroke-width="1.2" />
+
+      <line x1="-11" y1="-11" x2="11" y2="11" stroke-width="1.1" />
+      <line x1="11" y1="-11" x2="-11" y2="11" stroke-width="1.1" />
+      <path d="M 0 -14 Q 2.5 -2.5 14 0 Q 2.5 2.5 0 14 Q -2.5 2.5 -14 0 Q -2.5 -2.5 0 -14 Z" fill="#384A22" stroke-width="1.35" />
+    </g>
+  </defs>
+
+  <g stroke="#B8C99A" opacity="0.13">
+    <use href="#kbach-medallion-light" transform="translate(140, 140)" />
+    <use href="#kbach-medallion-light" transform="translate(0, 0)" />
+    <use href="#kbach-medallion-light" transform="translate(280, 0)" />
+    <use href="#kbach-medallion-light" transform="translate(0, 280)" />
+    <use href="#kbach-medallion-light" transform="translate(280, 280)" />
+  </g>
+</svg>
