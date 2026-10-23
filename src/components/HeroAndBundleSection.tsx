@@ -95,8 +95,8 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
         {/* Hero Center Headline + Go to Shop CTA */}
         <div className="relative z-10 text-center px-4 max-w-3xl mx-auto mt-2">
           <h1 className="font-display tracking-tight leading-[1.08] text-[38px] sm:text-[48px] lg:text-[55px]">
-            <span className="block text-[#768E5C] font-normal">The Pride of Kampot,</span>
-            <span className="block text-[#384A22] font-normal">Roasted to Perfection.</span>
+            <span className="block text-[#768E5C] font-normal">{t('hero_title_1')}</span>
+            <span className="block text-[#384A22] font-normal">{t('hero_title_2')}</span>
           </h1>
 
           <div className="mt-6">
@@ -105,7 +105,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
               onClick={() => onNavigate('shop', 'powders')}
               className="inline-flex items-center justify-center px-14 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[18px] font-medium shadow-md transition-all cursor-pointer min-w-[230px]"
             >
-              Go to Shop
+              {t('btn_go_shop')}
             </button>
           </div>
         </div>
@@ -250,20 +250,20 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
             {/* Subtle appetizing flavor pill accent */}
             <div className="absolute bottom-6 right-8 bg-[#8B6D3B]/90 backdrop-blur-sm text-[#F2F0E3] text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full shadow-lg border border-[#F2F0E3]/20 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#E5B54F]" />
-              <span>Honey Butter Glazed</span>
+              <span>{t('flavor_pill_honey')}</span>
             </div>
           </div>
 
           {/* Center 25% OFF Offer Block */}
           <div className="flex-1 text-center z-10 px-4 max-w-xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#8B6D3B]/25 text-[#E5B54F] border border-[#E5B54F]/30 text-xs font-semibold tracking-wider uppercase mb-2">
-              <span>★ Limited Batch Roasted Fresh in Kampot ★</span>
+              <span>{t('hero_batch_badge')}</span>
             </div>
             <h2 className="text-[68px] sm:text-[96px] lg:text-[115px] font-extrabold text-[#F2F0E3] leading-none tracking-tight">
-              25% OFF
+              {t('hero_bundle_offer_title')}
             </h2>
             <p className="text-[20px] sm:text-[26px] font-bold text-[#F2F0E3] mt-1">
-              Don’t Miss This Bundle Offer
+              {t('hero_bundle_offer_sub')}
             </p>
 
             <div className="mt-5">
@@ -272,13 +272,12 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                 onClick={onClaimOffer}
                 className="inline-flex items-center justify-center px-12 py-3 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[17px] font-medium transition-all shadow-md cursor-pointer min-w-[195px]"
               >
-                Claim Offer
+                {t('btn_claim_offer')}
               </button>
             </div>
 
             <p className="mt-6 text-[14px] sm:text-[16px] font-semibold text-[#F2F0E3]/95 leading-snug max-w-[490px] mx-auto">
-              Save 25% On Artisan Roasted Cashews: Honey Butter &amp;
-              <br className="hidden sm:inline" /> Chili Lime in 250g Jar ($20) &amp; 100g Pouch ($10)
+              {t('hero_bundle_offer_desc')}
             </p>
           </div>
 
@@ -295,7 +294,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
             {/* Subtle appetizing flavor pill accent */}
             <div className="absolute bottom-6 left-8 bg-[#B83A2A]/90 backdrop-blur-sm text-[#F2F0E3] text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full shadow-lg border border-[#F2F0E3]/20 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF7D6B]" />
-              <span>Chili Lime Seasoned</span>
+              <span>{t('flavor_pill_chili')}</span>
             </div>
           </div>
         </div>
@@ -376,7 +375,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                         onClick={() => onSelectBundleDetail(bundle)}
                         className="flex-1 py-2.5 px-5 rounded-full border border-[#F2F0E3]/45 hover:border-[#F2F0E3] text-[#F2F0E3] text-[14px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                       >
-                        Learn more
+                        {t('btn_learn_more')}
                       </button>
                     </div>
                   </div>

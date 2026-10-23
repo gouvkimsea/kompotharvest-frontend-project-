@@ -73,5 +73,43 @@ test('translations dictionary has consistent keys for EN, KM, and ZH', () => {
   for (const key of enKeys) {
     assert.ok(TRANSLATIONS.KM[key], `Missing Khmer translation for key: ${key}`);
     assert.ok(TRANSLATIONS.ZH[key], `Missing Chinese translation for key: ${key}`);
+    assert.ok(TRANSLATIONS.KM[key].trim().length > 0, `Empty Khmer translation for key: ${key}`);
+    assert.ok(TRANSLATIONS.ZH[key].trim().length > 0, `Empty Chinese translation for key: ${key}`);
   }
 });
+
+test('all required component keys exist and are translated across EN, KM, and ZH', () => {
+  const componentKeys = [
+    // Navbar
+    'nav_shop', 'nav_way', 'nav_autoship', 'nav_recipes', 'nav_rewards', 'nav_new_arrivals',
+    // Hero & Bundles
+    'hero_title_1', 'hero_title_2', 'btn_go_shop', 'hero_batch_badge', 'hero_bundle_offer_title',
+    // Comparison
+    'compare_title_1', 'compare_title_2', 'compare_col_kampot', 'compare_col_others', 'macro_calories', 'macro_fat', 'macro_protein',
+    // Influencer & How To Enjoy
+    'influencer_title_1', 'influencer_title_2', 'influencer_subtitle', 'btn_shop_now', 'btn_watch_review',
+    'enjoy_title', 'btn_see_recipes', 'enjoy_combine_stir', 'enjoy_spread', 'enjoy_blend', 'enjoy_spoon', 'enjoy_bake',
+    // Recipes & Reviews & Eco
+    'recipes_section_title_1', 'recipes_section_title_2', 'time_minutes', 'macro_kcal', 'btn_view_more_recipes',
+    'feedback_title_1', 'feedback_title_2', 'feedback_subtitle', 'feedback_tell_story', 'btn_share_feedback',
+    'eco_pillar_1_title', 'eco_pillar_2_title', 'eco_pillar_3_title', 'eco_pillar_4_title',
+    // Footer
+    'footer_artisan_title', 'footer_artisan_desc', 'footer_honey_bullet', 'footer_chili_bullet', 'footer_single_bullet',
+    'btn_order_now', 'footer_cta_msg', 'footer_sec_info', 'footer_sec_about', 'footer_sec_shop', 'footer_sec_more',
+    // Subpages & Modals
+    'autoship_step_1', 'autoship_step_2', 'autoship_freq_30', 'autoship_freq_45', 'autoship_freq_60',
+    'calc_impact_title', 'calc_impact_desc', 'calc_servings_label', 'calc_calories_saved', 'calc_fat_reduced', 'calc_plant_protein',
+    'recipes_page_title', 'recipes_all_tab', 'btn_share_recipe', 'recipe_ingredients_title', 'recipe_prep_steps_title',
+    'offer_modal_title', 'offer_modal_subtitle', 'offer_goal_weight', 'offer_goal_protein', 'offer_goal_lifestyle', 'offer_decline',
+    'fb_modal_title', 'fb_name_label', 'fb_role_label', 'fb_msg_label', 'btn_submit_feedback', 'btn_done',
+    // Cart & Checkout
+    'cart_title', 'cart_empty', 'cart_subtotal', 'cart_shipping', 'cart_total', 'cart_order_confirmed', 'btn_checkout', 'btn_place_order'
+  ];
+
+  for (const key of componentKeys) {
+    assert.ok(TRANSLATIONS.EN[key], `Missing EN key: ${key}`);
+    assert.ok(TRANSLATIONS.KM[key], `Missing KM key: ${key}`);
+    assert.ok(TRANSLATIONS.ZH[key], `Missing ZH key: ${key}`);
+  }
+});
+

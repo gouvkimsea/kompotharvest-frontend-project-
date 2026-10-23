@@ -60,8 +60,8 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
 
           <div className="text-center mx-auto">
             <h3 className="font-display text-[40px] sm:text-[54px] lg:text-[63px] leading-[1.05] tracking-tight">
-              <span className="block font-normal text-[#384A22]">What Makes Us</span>
-              <span className="block font-normal text-[#768E5C]">Different</span>
+              <span className="block font-normal text-[#384A22]">{t('compare_title_1')}</span>
+              <span className="block font-normal text-[#768E5C]">{t('compare_title_2')}</span>
             </h3>
           </div>
 
@@ -100,48 +100,44 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
               <div className="grid grid-cols-2 gap-6 sm:gap-8 w-full max-w-[310px]">
                 {/* Column Headers */}
                 <div className="text-center">
-                  <p className="text-[16px] sm:text-[17px] font-bold text-[#384A22] leading-tight">
-                    Artisan Roasted
-                    <br />
-                    Cashews
+                  <p className="text-[16px] sm:text-[17px] font-bold text-[#384A22] leading-tight whitespace-pre-line">
+                    {t('compare_col_kampot')}
                   </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-[16px] sm:text-[17px] font-bold text-[#8B6D3B] leading-tight">
-                    Regular Fried
-                    <br />
-                    Nuts
+                  <p className="text-[16px] sm:text-[17px] font-bold text-[#8B6D3B] leading-tight whitespace-pre-line">
+                    {t('compare_col_others')}
                   </p>
                 </div>
 
                 {/* Row 1: Calories */}
                 <div className="blob-card-1 bg-[#314B1C] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[38px] font-medium leading-none tabular-nums">58</span>
-                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">Calories</span>
+                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">{t('macro_calories')}</span>
                 </div>
                 <div className="blob-card-2 bg-[#8B6D3B] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[38px] font-medium leading-none tabular-nums">185</span>
-                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">Calories</span>
+                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">{t('macro_calories')}</span>
                 </div>
 
                 {/* Row 2: Fat */}
                 <div className="blob-card-2 bg-[#314B1C] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[36px] font-medium leading-none tabular-nums">1.7g</span>
-                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">Fat</span>
+                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">{t('macro_fat')}</span>
                 </div>
                 <div className="blob-card-1 bg-[#8B6D3B] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[36px] font-medium leading-none tabular-nums">15g</span>
-                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">Fat</span>
+                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">{t('macro_fat')}</span>
                 </div>
 
                 {/* Row 3: Protein */}
                 <div className="blob-card-1 bg-[#314B1C] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[38px] font-medium leading-none tabular-nums">7g</span>
-                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">Protein</span>
+                  <span className="text-[14px] text-[#9AB87A] font-medium mt-1">{t('macro_protein')}</span>
                 </div>
                 <div className="blob-card-2 bg-[#8B6D3B] text-[#F2F0E3] w-[124px] h-[116px] mx-auto flex flex-col items-center justify-center text-center shadow-sm">
                   <span className="text-[38px] font-medium leading-none tabular-nums">6g</span>
-                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">Protein</span>
+                  <span className="text-[14px] text-[#F2F0E3]/85 font-medium mt-1">{t('macro_protein')}</span>
                 </div>
               </div>
             </div>
@@ -150,7 +146,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
             <div className="md:col-span-4 flex flex-col items-center relative">
               <div className="mb-2 flex flex-col items-center md:-mr-12">
                 <span className="text-[18px] font-extrabold text-[#8B6D3B] tracking-tight">
-                  Others
+                  {t('compare_others_badge')}
                 </span>
                 <span className="mt-1 w-8 h-8 rounded-full bg-[#8B6D3B] text-[#F2F0E3] flex items-center justify-center shadow">
                   <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -177,7 +173,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
               onClick={() => onNavigate('shop', 'powders')}
               className="px-10 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[16px] font-medium shadow-md transition-colors whitespace-nowrap cursor-pointer"
             >
-              Explore The Products Now
+              {t('btn_explore_products')}
             </button>
           </div>
         </div>
@@ -200,7 +196,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
           {/* Carousel Rotation Controls for the 4 Kampot Harvest Co. Products */}
           <div className="flex justify-end items-center gap-2 mb-3 pr-2">
             <span className="text-xs font-semibold text-[#384A22]/75 mr-1">
-              Showing All 4 Artisan Roasted Cashews
+              {t('compare_showing_all')}
             </span>
             <button
               type="button"
@@ -252,7 +248,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                     {product.name}
                   </h4>
                   <p className="text-[13.5px] font-semibold text-[#768E5C] mt-0.5">
-                    {product.flavor} · {product.packageSize}
+                    {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
                   </p>
 
                   <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
@@ -285,7 +281,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                       onClick={() => onSelectProduct(product)}
                       className="flex-1 py-2.5 px-3.5 rounded-full border border-[#8B6D3B] text-[#384A22] hover:bg-[#8B6D3B]/10 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                     >
-                      Learn more
+                      {t('btn_learn_more')}
                     </button>
                   </div>
                 </div>

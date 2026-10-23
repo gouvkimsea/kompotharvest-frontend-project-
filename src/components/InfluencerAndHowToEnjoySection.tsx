@@ -3,6 +3,7 @@ import { Play, X } from 'lucide-react';
 import { ASSETS, INFLUENCERS, InfluencerItem } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 interface InfluencerAndHowToEnjoyProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
@@ -11,6 +12,7 @@ interface InfluencerAndHowToEnjoyProps {
 export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyProps> = ({
   onNavigate,
 }) => {
+  const { t } = useI18n();
   const [activeInfluencer, setActiveInfluencer] = useState<InfluencerItem | null>(null);
   const [activeDot, setActiveDot] = useState(0);
 
@@ -31,11 +33,11 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
 
           <div className="flex-1 text-center z-10 px-4 max-w-xl mx-auto">
             <h3 className="font-display text-[38px] sm:text-[48px] lg:text-[56px] leading-[1.05] tracking-tight">
-              <span className="block font-normal text-[#384A22]">What Influencer</span>
-              <span className="block font-normal text-[#768E5C]">Says About Us</span>
+              <span className="block font-normal text-[#384A22]">{t('influencer_title_1', 'What Influencer')}</span>
+              <span className="block font-normal text-[#768E5C]">{t('influencer_title_2', 'Says About Us')}</span>
             </h3>
             <p className="mt-3 text-[17px] sm:text-[20px] font-light text-[#384A22]">
-              Take a moment for those who trust us
+              {t('influencer_subtitle', 'Take a moment for those who trust us')}
             </p>
             <div className="mt-5">
               <button
@@ -43,7 +45,7 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 onClick={() => onNavigate('shop', 'powders')}
                 className="inline-flex items-center justify-center gap-1.5 px-7 py-2.5 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] text-[14px] font-medium transition-colors cursor-pointer"
               >
-                <span>Shop Now</span>
+                <span>{t('btn_shop_now', 'Shop Now')}</span>
                 <span>›</span>
               </button>
             </div>
@@ -159,7 +161,7 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                       </p>
                       <p className="text-white/55 text-[11px] truncate mb-3">{inf.handle}</p>
                       <div className="w-full py-2.5 rounded-full bg-white text-[#1A1A1A] text-center text-[12px] font-semibold hover:bg-[#F2F0E3] transition-colors">
-                        Watch Review
+                        {t('btn_watch_review', 'Watch Review')}
                       </div>
                     </div>
                   </div>
@@ -197,14 +199,14 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
           {/* Header Row: How to Enjoy Botenz + See recips > */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <h3 className="font-display text-[38px] sm:text-[48px] lg:text-[52px] font-normal text-[#F2F0E3] tracking-tight">
-              How to Enjoy Botenz
+              {t('enjoy_title', 'How to Enjoy Botenz')}
             </h3>
             <button
               type="button"
               onClick={() => onNavigate('recipes')}
               className="self-start sm:self-auto inline-flex items-center justify-center gap-1.5 px-7 py-2.5 rounded-full border border-[#F2F0E3]/70 text-[#F2F0E3] hover:bg-[#F2F0E3] hover:text-[#384A22] text-[14px] font-medium transition-colors cursor-pointer"
             >
-              <span>See recips</span>
+              <span>{t('btn_see_recipes', 'See recipes')}</span>
               <span>›</span>
             </button>
           </div>
@@ -213,10 +215,8 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
           <div className="grid grid-cols-1 lg:grid-cols-12 items-center gap-10">
             {/* Left Mixing Graphic */}
             <div className="lg:col-span-6 flex flex-col items-center">
-              <p className="text-[18px] sm:text-[20px] font-light text-[#F2F0E3] text-center leading-tight mb-4">
-                Combine and stir
-                <br />
-                until smooth
+              <p className="text-[18px] sm:text-[20px] font-light text-[#F2F0E3] text-center leading-tight mb-4 whitespace-pre-line">
+                {t('enjoy_combine_stir', 'Combine and stir\nuntil smooth')}
               </p>
 
               <div className="relative flex items-center justify-center gap-2 sm:gap-4 w-full max-w-[600px]">
@@ -261,10 +261,10 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 </div>
                 <div>
                   <h4 className="text-[24px] sm:text-[26px] font-medium text-[#F2F0E3] leading-tight">
-                    Spread it
+                    {t('enjoy_spread', 'Spread it')}
                   </h4>
                   <p className="text-[15px] font-light text-[#8FA85A] mt-0.5">
-                    On toast, cracker &amp; fruit
+                    {t('enjoy_spread_desc', 'On toast, cracker & fruit')}
                   </p>
                 </div>
               </div>
@@ -281,10 +281,10 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 </div>
                 <div>
                   <h4 className="text-[24px] sm:text-[26px] font-medium text-[#F2F0E3] leading-tight">
-                    Blend it
+                    {t('enjoy_blend', 'Blend it')}
                   </h4>
                   <p className="text-[15px] font-light text-[#8FA85A] mt-0.5">
-                    In smoothies &amp; shakes
+                    {t('enjoy_blend_desc', 'In smoothies & shakes')}
                   </p>
                 </div>
               </div>
@@ -301,10 +301,10 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 </div>
                 <div>
                   <h4 className="text-[24px] sm:text-[26px] font-medium text-[#F2F0E3] leading-tight">
-                    Spoon it
+                    {t('enjoy_spoon', 'Spoon it')}
                   </h4>
                   <p className="text-[15px] font-light text-[#8FA85A] mt-0.5">
-                    Straight from the jar
+                    {t('enjoy_spoon_desc', 'Straight from the jar')}
                   </p>
                 </div>
               </div>
@@ -321,10 +321,10 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 </div>
                 <div>
                   <h4 className="text-[24px] sm:text-[26px] font-medium text-[#F2F0E3] leading-tight">
-                    Cook/Bake
+                    {t('enjoy_bake', 'Cook/Bake')}
                   </h4>
                   <p className="text-[15px] font-light text-[#8FA85A] mt-0.5">
-                    In recipes and desserts
+                    {t('enjoy_bake_desc', 'In recipes and desserts')}
                   </p>
                 </div>
               </div>
@@ -346,7 +346,7 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
             <div className="flex items-center justify-between pb-4 border-b border-[#384A22]/15">
               <div>
                 <span className="text-xs uppercase tracking-wider font-bold text-[#8B6D3B]">
-                  {activeInfluencer.platform} Creator Story
+                  {activeInfluencer.platform} {t('creator_story', 'Creator Story')}
                 </span>
                 <h4 className="text-2xl font-extrabold text-[#384A22]">
                   {activeInfluencer.name} — {activeInfluencer.role}
@@ -382,7 +382,7 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 }}
                 className="px-6 py-2.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-sm font-semibold cursor-pointer"
               >
-                Shop {activeInfluencer.name}&apos;s Favorites
+                {t('shop_favorites', 'Shop Favorites')}
               </button>
             </div>
           </div>

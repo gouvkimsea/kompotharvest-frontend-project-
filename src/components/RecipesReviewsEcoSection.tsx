@@ -9,6 +9,7 @@ import {
 import { SmartImage } from './SmartImage';
 import { KitchenIconsRow } from './ComparisonAndProductsSection';
 import { ActivePage } from './Navbar';
+import { useI18n } from '../utils/i18nContext';
 
 interface RecipesReviewsEcoProps {
   onNavigate: (page: ActivePage) => void;
@@ -21,6 +22,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
   onSelectRecipe,
   onOpenFeedbackModal,
 }) => {
+  const { t } = useI18n();
   const homeRecipes = RECIPES.filter((r) => r.featuredOnHome);
 
   return (
@@ -34,9 +36,9 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
           </div>
 
           <div className="text-center mx-auto">
-            <h3 className="font-display text-[36px] sm:text-[46px] lg:text-[53px] leading-[1.08] tracking-tight">
-              <span className="block font-normal text-[#384A22]">Healthy With</span>
-              <span className="block font-normal text-[#768E5C]">Botenz - Recipes</span>
+            <h3 className="font-display text-[38px] sm:text-[48px] lg:text-[54px] leading-[1.08] tracking-tight">
+              <span className="block font-normal text-[#384A22]">{t('recipes_section_title_1', 'Healthy With')}</span>
+              <span className="block font-normal text-[#768E5C]">{t('recipes_section_title_2', 'Botenz - Recipes')}</span>
             </h3>
           </div>
 
@@ -67,7 +69,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                     <span className="text-[16px] font-medium leading-none tabular-nums">
                       {recipe.protein}
                     </span>
-                    <span className="text-[12px] font-normal leading-none mt-1">protein</span>
+                    <span className="text-[12px] font-normal leading-none mt-1">{t('macro_protein', 'protein')}</span>
                   </div>
 
                   <div className="blob-badge bg-[#F2F0E3] text-[#314B1C] w-[78px] h-[58px] flex flex-col items-center justify-center text-center shadow">
@@ -75,7 +77,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                       {recipe.time}
                     </span>
                     <span className="text-[12px] font-normal leading-none mt-1">
-                      {recipe.timeUnit || 'minutes'}
+                      {recipe.timeUnit || t('time_minutes', 'minutes')}
                     </span>
                   </div>
 
@@ -84,7 +86,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                       {recipe.kcal}
                     </span>
                     <span className="text-[12px] font-normal leading-none mt-1">
-                      {recipe.kcalUnit || 'kcal'}
+                      {recipe.kcalUnit || t('macro_kcal', 'kcal')}
                     </span>
                   </div>
                 </div>
@@ -105,7 +107,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
             onClick={() => onNavigate('recipes')}
             className="inline-flex items-center justify-center gap-1.5 px-9 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[15px] font-medium shadow-md transition-colors cursor-pointer"
           >
-            <span>View more recipes</span>
+            <span>{t('btn_view_more_recipes', 'View more recipes')}</span>
             <span>›</span>
           </button>
         </div>
@@ -124,9 +126,9 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
             <div className="lg:col-span-5 text-[#F2F0E3]">
               <div className="flex items-end gap-5 mb-3">
                 <h2 className="text-[44px] sm:text-[56px] lg:text-[62px] font-normal leading-[1.05] tracking-tight text-[#F0F0E3]">
-                  Customer
+                  {t('feedback_title_1', 'Customer')}
                   <br />
-                  feedback
+                  {t('feedback_title_2', 'feedback')}
                 </h2>
                 <SmartImage
                   src={ASSETS.feedbackChatIcon}
@@ -137,7 +139,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
               </div>
 
               <h3 className="text-[22px] sm:text-[28px] font-extralight text-[#F0F0E3] mb-8">
-                What do you think about Botenz?
+                {t('feedback_subtitle', 'What do you think about Botenz?')}
               </h3>
 
               <div className="space-y-7 max-w-md">
@@ -178,7 +180,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
           {/* Bottom Centered: Tell your story + Share your feedback pill button */}
           <div className="mt-10 flex flex-col items-center justify-center text-center">
             <h4 className="text-[20px] sm:text-[22px] font-extralight text-[#F2F0E3] mb-3">
-              Tell your story
+              {t('feedback_tell_story', 'Tell your story')}
             </h4>
             <div className="flex items-center justify-center gap-3">
               <SmartImage
@@ -192,7 +194,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                 onClick={onOpenFeedbackModal}
                 className="px-10 py-4 rounded-full bg-[#F2F0E3] hover:bg-white text-[#384A22] text-[22px] sm:text-[26px] font-normal shadow-lg transition-transform hover:scale-105 cursor-pointer"
               >
-                Share your feedback
+                {t('btn_share_feedback', 'Share your feedback')}
               </button>
               <SmartImage
                 src={ASSETS.feedbackSparkleRight}
@@ -219,10 +221,10 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                 />
               </div>
               <h4 className="text-[26px] sm:text-[30px] font-normal text-[#384A22] leading-[1.12] whitespace-pre-line mb-4">
-                {pillar.title}
+                {t(`eco_pillar_${pillar.id}_title`, pillar.title)}
               </h4>
               <p className="text-[14.5px] font-light text-[#384A22]/90 leading-relaxed max-w-[270px]">
-                {pillar.description}
+                {t(`eco_pillar_${pillar.id}_desc`, pillar.description)}
               </p>
             </div>
           ))}

@@ -215,7 +215,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                       {product.name}
                     </h3>
                     <p className="text-[13.5px] font-medium text-[#9AB87A] mt-0.5">
-                      {product.flavor} · {product.packageSize}
+                      {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
                     </p>
 
                     <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
@@ -248,7 +248,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         onClick={() => onSelectProduct(product)}
                         className="flex-1 py-2.5 px-4 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                       >
-                        Learn more
+                        {t('btn_learn_more', 'Learn more')}
                       </button>
                     </div>
                   </div>
@@ -278,6 +278,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
   onSelectRecipe,
   onOpenShareRecipeModal,
 }) => {
+  const { t } = useI18n();
   const [selectedFilter, setSelectedFilter] = useState<string>('ALL');
 
   const productCategories = [
@@ -298,7 +299,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
     <div className="w-full bg-[#F2F0E3] pt-10 pb-20 px-4 sm:px-8 lg:px-14">
       <div className="max-w-[1380px] mx-auto">
         <h1 className="font-display text-center text-[46px] sm:text-[60px] lg:text-[68px] font-normal text-[#384A22] tracking-tight mb-10">
-          Botenz recipes
+          {t('recipes_page_title', 'Botenz recipes')}
         </h1>
 
         {/* Filter Bar by Nut Powder + Share Your Recipe Button */}
@@ -315,7 +316,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
                     : 'bg-[#E5E2CE] text-[#384A22] hover:bg-[#384A22]/15'
                 }`}
               >
-                {cat === 'ALL' ? 'All Recipes' : cat.replace('Botenz ', '')}
+                {cat === 'ALL' ? t('recipes_all_tab', 'All Recipes') : cat.replace('Botenz ', '')}
               </button>
             ))}
           </div>
@@ -325,7 +326,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
             onClick={onOpenShareRecipeModal}
             className="px-6 py-2.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-sm font-medium transition-colors cursor-pointer"
           >
-            Share Your Recipe
+            {t('btn_share_recipe', 'Share Your Recipe')}
           </button>
         </div>
 
@@ -377,7 +378,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
                       <span className="text-[15px] font-medium leading-none tabular-nums">
                         {recipe.protein}
                       </span>
-                      <span className="text-[11.5px] font-normal leading-none mt-1">protein</span>
+                      <span className="text-[11.5px] font-normal leading-none mt-1">{t('macro_protein', 'protein')}</span>
                     </div>
 
                     <div className="blob-badge bg-[#F2F0E3] text-[#314B1C] w-[74px] h-[54px] flex flex-col items-center justify-center text-center shadow">
@@ -385,7 +386,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
                         {recipe.time}
                       </span>
                       <span className="text-[11.5px] font-normal leading-none mt-1">
-                        {recipe.timeUnit || 'minute'}
+                        {recipe.timeUnit || t('time_minutes', 'minute')}
                       </span>
                     </div>
 
@@ -394,7 +395,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
                         {recipe.kcal}
                       </span>
                       <span className="text-[11.5px] font-normal leading-none mt-1">
-                        {recipe.kcalUnit || 'kcal'}
+                        {recipe.kcalUnit || t('macro_kcal', 'kcal')}
                       </span>
                     </div>
                   </div>
@@ -461,7 +462,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                       htmlFor="autoship-flavor"
                       className="block text-xs font-bold uppercase tracking-wider text-[#9AB87A] mb-2"
                     >
-                      1. Choose Flavor &amp; Size
+                      {t('autoship_step_1', '1. Select Your Artisan Flavor')}
                     </label>
                     <select
                       id="autoship-flavor"
@@ -485,7 +486,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                       htmlFor="autoship-freq"
                       className="block text-xs font-bold uppercase tracking-wider text-[#9AB87A] mb-2"
                     >
-                      2. Delivery Frequency
+                      {t('autoship_step_2', '2. Delivery Frequency')}
                     </label>
                     <select
                       id="autoship-freq"
@@ -495,9 +496,9 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                       }
                       className="w-full bg-[#2B3B18] border border-[#F2F0E3]/25 rounded-xl px-4 py-3 text-[#F2F0E3] font-medium focus:outline-none"
                     >
-                      <option value="30">Every 30 Days (Most Popular)</option>
-                      <option value="45">Every 45 Days</option>
-                      <option value="60">Every 60 Days</option>
+                      <option value="30">{t('autoship_freq_30', 'Every 30 Days (Most Popular)')}</option>
+                      <option value="45">{t('autoship_freq_45', 'Every 45 Days')}</option>
+                      <option value="60">{t('autoship_freq_60', 'Every 60 Days')}</option>
                     </select>
                   </div>
                 </div>
@@ -515,7 +516,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                     onClick={() => onNavigate('shop', 'bundles')}
                     className="px-7 py-3.5 rounded-full border border-[#F2F0E3]/40 hover:border-[#F2F0E3] text-[#F2F0E3] text-[15px] font-medium transition-colors cursor-pointer"
                   >
-                    Explore 25% Off Bundles
+                    {t('btn_explore_bundles', 'Explore 25% Off Bundles')}
                   </button>
                 </div>
               </div>
@@ -550,16 +551,15 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
             <div className="lg:col-span-5">
               <h3 className="text-2xl font-extrabold text-[#384A22]">
-                Calculate Your Weekly Botenz Impact
+                {t('calc_impact_title', 'Calculate Your Weekly Botenz Impact')}
               </h3>
               <p className="text-sm text-[#384A22]/80 mt-1">
-                See how much excess oil and calories you save by swapping regular jarred nut butter
-                for Botenz cold-pressed powder.
+                {t('calc_impact_desc', 'See how much excess oil and calories you save by swapping regular fried nuts for Kampot Harvest artisan roasted cashews.')}
               </p>
 
               <div className="mt-6">
                 <div className="flex justify-between text-sm font-bold text-[#384A22] mb-2">
-                  <label htmlFor="servings-slider">Servings per week (15g scoop):</label>
+                  <label htmlFor="servings-slider">{t('calc_servings_label', 'Servings per week (30g portion):')}</label>
                   <span className="tabular-nums text-[#8B6D3B]">{servingsPerWeek} servings / week</span>
                 </div>
                 <input
@@ -577,7 +577,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
             <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
               <div className="bg-[#F2F0E3] rounded-2xl p-5">
                 <span className="text-xs font-bold uppercase text-[#768E5C]">
-                  Calories Saved / Week
+                  {t('calc_calories_saved', 'Calories Saved / Week')}
                 </span>
                 <p className="text-3xl font-extrabold text-[#384A22] mt-1 tabular-nums">
                   -{nutritionStats.caloriesSavedWeekly} kcal
@@ -589,22 +589,22 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
 
               <div className="bg-[#F2F0E3] rounded-2xl p-5">
                 <span className="text-xs font-bold uppercase text-[#768E5C]">
-                  Fat Reduced / Week
+                  {t('calc_fat_reduced', 'Fat Reduced / Week')}
                 </span>
                 <p className="text-3xl font-extrabold text-[#384A22] mt-1 tabular-nums">
                   -{nutritionStats.fatSavedGramsWeekly}g
                 </p>
-                <span className="text-xs text-[#384A22]/70">90% less saturated oil</span>
+                <span className="text-xs text-[#384A22]/70">{t('calc_oil_less', '90% less saturated oil')}</span>
               </div>
 
               <div className="bg-[#384A22] text-[#F2F0E3] rounded-2xl p-5">
                 <span className="text-xs font-bold uppercase text-[#9AB87A]">
-                  Clean Plant Protein
+                  {t('calc_plant_protein', 'Clean Plant Protein')}
                 </span>
                 <p className="text-3xl font-extrabold mt-1 tabular-nums">
                   +{nutritionStats.extraProteinGramsWeekly}g
                 </p>
-                <span className="text-xs text-[#F2F0E3]/80">2× protein density per kcal</span>
+                <span className="text-xs text-[#F2F0E3]/80">{t('calc_density', '2× protein density per kcal')}</span>
               </div>
             </div>
           </div>
@@ -623,9 +623,11 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                 />
               </div>
               <h3 className="text-xl font-bold text-[#384A22] whitespace-pre-line mb-2">
-                {pillar.title}
+                {t(`eco_pillar_${pillar.id}_title`, pillar.title)}
               </h3>
-              <p className="text-sm text-[#384A22]/80 leading-relaxed">{pillar.description}</p>
+              <p className="text-sm text-[#384A22]/80 leading-relaxed">
+                {t(`eco_pillar_${pillar.id}_desc`, pillar.description)}
+              </p>
             </div>
           ))}
         </div>
@@ -1111,7 +1113,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="flex justify-between items-start mb-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-wider text-[#8B6D3B]">
-                25% OFF Bundle Value Pack
+                {t('hero_bundle_offer_title', '25% OFF')} {t('cat_bundles', 'Bundles')}
               </span>
               <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22]">{bundle.name}</h3>
             </div>
@@ -1163,7 +1165,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }}
                 className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
               >
-                {t('btn_add_to_cart')} — Save 25%
+                {t('btn_add_to_cart')} — {t('hero_bundle_offer_title', '25% OFF')}
               </button>
             </div>
           </div>
@@ -1192,10 +1194,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#768E5C]">
-              Flavor: {product!.flavor} · Size: {activeVariant ? activeVariant.label : product!.packageSize}
+              {t('flavors_title', 'Flavors')}: {product!.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {activeVariant ? activeVariant.label : (product!.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch'))}
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22] mt-0.5">
-              {product!.name} — {product!.flavor}
+              {product!.name} — {product!.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')}
             </h3>
           </div>
           <button
@@ -1225,7 +1227,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {product!.variants && product!.variants.length > 0 && (
               <div>
                 <span className="block text-xs font-bold uppercase tracking-wider mb-2">
-                  Package Size:
+                  {t('flavors_title', 'Package Size')}:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {product!.variants.map((v, i) => (
@@ -1253,19 +1255,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="block text-lg font-extrabold text-[#384A22] tabular-nums">
                     {product!.nutrition.calories}
                   </span>
-                  <span className="text-[11px] text-[#768E5C]">Calories</span>
+                  <span className="text-[11px] text-[#768E5C]">{t('macro_calories', 'Calories')}</span>
                 </div>
                 <div>
                   <span className="block text-lg font-extrabold text-[#384A22] tabular-nums">
                     {product!.nutrition.protein}
                   </span>
-                  <span className="text-[11px] text-[#768E5C]">Protein</span>
+                  <span className="text-[11px] text-[#768E5C]">{t('macro_protein', 'Protein')}</span>
                 </div>
                 <div>
                   <span className="block text-lg font-extrabold text-[#384A22] tabular-nums">
                     {product!.nutrition.fat}
                   </span>
-                  <span className="text-[11px] text-[#768E5C]">Fat</span>
+                  <span className="text-[11px] text-[#768E5C]">{t('macro_fat', 'Fat')}</span>
                 </div>
                 <div>
                   <span className="block text-lg font-extrabold text-[#384A22] tabular-nums">
@@ -1289,7 +1291,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   onChange={(e) => setIsAutoship(e.target.checked)}
                   className="accent-[#384A22] w-4 h-4"
                 />
-                <span>Subscribe &amp; Save Extra 15% with Autoship</span>
+                <span>{t('cart_autoship_savings', 'Subscribe & Save Extra 15% with Autoship')}</span>
               </label>
             </div>
 
@@ -1342,6 +1344,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
   onClose,
   onShopIngredient,
 }) => {
+  const { t } = useI18n();
   if (!recipe) return null;
 
   return (
@@ -1383,21 +1386,21 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
             <div className="flex gap-3">
               <div className="bg-white px-3.5 py-2 rounded-xl text-center">
                 <span className="block font-extrabold text-sm">{recipe.protein}</span>
-                <span className="text-[11px] text-[#768E5C]">Protein</span>
+                <span className="text-[11px] text-[#768E5C]">{t('recipe_detail_protein', 'Protein')}</span>
               </div>
               <div className="bg-white px-3.5 py-2 rounded-xl text-center">
                 <span className="block font-extrabold text-sm">{recipe.time} min</span>
-                <span className="text-[11px] text-[#768E5C]">Prep Time</span>
+                <span className="text-[11px] text-[#768E5C]">{t('recipe_detail_prep', 'Prep Time')}</span>
               </div>
               <div className="bg-white px-3.5 py-2 rounded-xl text-center">
                 <span className="block font-extrabold text-sm">{recipe.kcal}</span>
-                <span className="text-[11px] text-[#768E5C]">Calories</span>
+                <span className="text-[11px] text-[#768E5C]">{t('recipe_detail_calories', 'Calories')}</span>
               </div>
             </div>
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider mb-1.5">
-                Ingredients:
+                {t('recipe_ingredients_title', 'Ingredients:')}
               </h4>
               <ul className="space-y-1 text-xs text-[#384A22]/90">
                 {recipe.ingredients.map((ing, idx) => (
@@ -1408,7 +1411,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
 
             <div>
               <h4 className="text-xs font-extrabold uppercase tracking-wider mb-1.5">
-                1-Minute Preparation:
+                {t('recipe_prep_steps_title', '1-Minute Preparation:')}
               </h4>
               <ol className="space-y-1.5 text-xs text-[#384A22]/90 list-decimal list-inside">
                 {recipe.steps.map((st, idx) => (
@@ -1425,7 +1428,7 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
               }}
               className="w-full py-3 rounded-full bg-[#384A22] hover:bg-[#314B1C] text-[#F2F0E3] text-xs font-bold uppercase tracking-wider cursor-pointer"
             >
-              Shop {recipe.productFilter}
+              {t('btn_shop_recipe_ingredient', 'Shop Ingredients')}
             </button>
           </div>
         </div>
@@ -1448,6 +1451,7 @@ export const FirstOrderOfferModal: React.FC<FirstOrderOfferModalProps> = ({
   onClose,
   onUnlockDiscount,
 }) => {
+  const { t } = useI18n();
   if (!isOpen) return null;
 
   return (
@@ -1482,29 +1486,27 @@ export const FirstOrderOfferModal: React.FC<FirstOrderOfferModalProps> = ({
         >
           <BotenzLogo variant="green" className="h-20 w-auto mb-5" />
 
-          <h2 className="font-display text-[36px] sm:text-[42px] text-[#314B1C] leading-[1.08] font-normal">
-            Enjoy 15% OFF
-            <br />
-            Your First
-            <br />
-            Order
+          <h2 className="font-display text-[36px] sm:text-[42px] text-[#314B1C] leading-[1.08] font-normal whitespace-pre-line">
+            {t('offer_modal_title', 'Enjoy 15% OFF\nYour First\nOrder')}
           </h2>
 
-          <p className="mt-4 text-[16px] text-[#314B1C] leading-snug">
-            To Unlock Select:
-            <br />
-            What is your health goal today?
+          <p className="mt-4 text-[16px] text-[#314B1C] leading-snug whitespace-pre-line">
+            {t('offer_modal_subtitle', 'To Unlock Select:\nWhat is your health goal today?')}
           </p>
 
           <div className="mt-6 w-full max-w-[310px] space-y-3">
-            {['Weight Goals', 'Protein Powder', 'Health Lifestyle'].map((goal) => (
+            {[
+              { id: 'Weight Goals', label: t('offer_goal_weight', 'Weight Goals') },
+              { id: 'Protein Powder', label: t('offer_goal_protein', 'Protein Powder') },
+              { id: 'Health Lifestyle', label: t('offer_goal_lifestyle', 'Health Lifestyle') },
+            ].map((goalItem) => (
               <button
-                key={goal}
+                key={goalItem.id}
                 type="button"
-                onClick={() => onUnlockDiscount(goal)}
+                onClick={() => onUnlockDiscount(goalItem.id)}
                 className="w-full py-3.5 px-6 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-white text-[16px] font-semibold shadow transition-colors cursor-pointer"
               >
-                {goal}
+                {goalItem.label}
               </button>
             ))}
           </div>
@@ -1514,7 +1516,7 @@ export const FirstOrderOfferModal: React.FC<FirstOrderOfferModalProps> = ({
             onClick={onClose}
             className="mt-6 text-[14px] font-bold text-[#314B1C] underline hover:text-[#8B6D3B] cursor-pointer"
           >
-            No Thanks, I&apos;ll Pay Full Price...
+            {t('offer_decline', "No Thanks, I'll Pay Full Price...")}
           </button>
         </div>
 
@@ -1540,6 +1542,7 @@ interface FeedbackModalProps {
 }
 
 export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose }) => {
+  const { t } = useI18n();
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
   const [message, setMessage] = useState('');
@@ -1589,7 +1592,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         aria-label="Share your Botenz story"
       >
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-2xl font-extrabold text-[#384A22]">Tell Your Botenz Story</h3>
+          <h3 className="text-2xl font-extrabold text-[#384A22]">{t('fb_modal_title', 'Tell Your Botenz Story')}</h3>
           <button
             type="button"
             onClick={onClose}
@@ -1603,10 +1606,9 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
         {submitted ? (
           <div className="text-center py-6 space-y-3">
             <CheckCircle2 className="w-12 h-12 text-[#384A22] mx-auto" />
-            <h4 className="text-lg font-bold">Thank you for sharing, {name}!</h4>
+            <h4 className="text-lg font-bold">{t('fb_success_title', 'Thank you for sharing!')}</h4>
             <p className="text-sm text-[#384A22]/80">
-              Our team reviews every customer story and recipe submission—and we&apos;ve added a
-              15% thank-you reward to your session!
+              {t('fb_success_desc', "Our team reviews every customer story and recipe submission—and we've added a 15% thank-you reward to your session!")}
             </p>
             <button
               type="button"
@@ -1619,14 +1621,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
               }}
               className="mt-2 px-7 py-2.5 rounded-full bg-[#384A22] text-[#F2F0E3] text-sm font-semibold cursor-pointer"
             >
-              Done
+              {t('btn_done', 'Done')}
             </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="fb-name" className="block text-xs font-bold uppercase mb-1">
-                Your Name *
+                {t('fb_name_label', 'Your Name *')}
               </label>
               <input
                 id="fb-name"
@@ -1639,7 +1641,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             </div>
             <div>
               <label htmlFor="fb-role" className="block text-xs font-bold uppercase mb-1">
-                Role / Passion (Optional)
+                {t('fb_role_label', 'Role / Passion (Optional)')}
               </label>
               <input
                 id="fb-role"
@@ -1652,14 +1654,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
             </div>
             <div>
               <label htmlFor="fb-msg" className="block text-xs font-bold uppercase mb-1">
-                Your Review, Recipe, or Inquiry *
+                {t('fb_msg_label', 'Your Review, Recipe, or Inquiry *')}
               </label>
               <textarea
                 id="fb-msg"
                 rows={4}
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="How do you enjoy Botenz Nut Butter Powder?"
+                placeholder={t('fb_placeholder_msg', 'How do you enjoy Kampot Harvest Artisan Cashews?')}
                 className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm"
               />
             </div>
@@ -1668,7 +1670,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
               type="submit"
               className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow cursor-pointer"
             >
-              Submit Feedback
+              {t('btn_submit_feedback', 'Submit Feedback')}
             </button>
           </form>
         )}

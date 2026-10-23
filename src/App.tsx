@@ -88,7 +88,7 @@ export default function App() {
       ];
     });
 
-    showToast(`Added ${product.name} — ${product.flavor} (${resolvedSize}) to your bag`);
+    showToast(`${t('btn_added')} — ${product.name}`);
   };
 
   const handleAddBundleToCart = (bundle: BundleItem) => {
@@ -113,7 +113,7 @@ export default function App() {
       ];
     });
 
-    showToast(`Added ${bundle.name} (25% OFF) to your bag`);
+    showToast(`${t('btn_added')} — ${bundle.name}`);
   };
 
   const handleUpdateQuantity = (id: string, delta: number) => {
@@ -303,10 +303,10 @@ export default function App() {
       <FirstOrderOfferModal
         isOpen={isFirstOrderModalOpen}
         onClose={() => setIsFirstOrderModalOpen(false)}
-        onUnlockDiscount={(goal) => {
+        onUnlockDiscount={() => {
           setPromoCodeActive(true);
           setIsFirstOrderModalOpen(false);
-          showToast(`15% OFF Unlocked for ${goal}! Applied automatically at checkout.`);
+          showToast(`${t('btn_unlock_discount')}! Applied.`);
         }}
       />
 

@@ -25,13 +25,13 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
           {/* Section Header */}
           <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16">
             <span className="text-xs uppercase tracking-[0.25em] font-bold text-[#8B6D3B] bg-[#E8E4D5] px-3.5 py-1 rounded-full inline-block">
-              Kampot Harvest Co.
+              {t('brand_name', 'KAMPOT HARVEST')}
             </span>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#384A22] mt-3">
-              Artisan Roasted Cashews
+              {t('footer_artisan_title', 'Artisan Roasted Cashews')}
             </h2>
             <p className="text-sm sm:text-base text-[#384A22]/75 mt-3 leading-relaxed">
-              Crafted in small batches with single-origin Cambodian cashews. Choose your favorite flavor in on-the-go resealable pouches or reusable glass jars.
+              {t('footer_artisan_desc', 'Crafted in small batches with single-origin Cambodian cashews. Choose your favorite flavor in on-the-go resealable pouches or reusable glass jars.')}
             </p>
           </div>
 
@@ -40,6 +40,9 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
             {PRODUCTS.map((prod) => {
               const isHoneyButter = prod.flavor === 'Honey Butter';
               const isJar = prod.packageSize.includes('Jar');
+              const localizedFlavor = isHoneyButter ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime');
+              const localizedSize = isJar ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch');
+              const localizedDesc = isJar ? t('footer_jar_desc', 'Airtight Glass Jar') : t('footer_pouch_desc', 'Resealable Fresh Pouch');
 
               return (
                 <div
@@ -61,10 +64,10 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                         backgroundColor: isHoneyButter ? '#8B6D3B' : '#B83A2A',
                       }}
                     >
-                      {prod.flavor}
+                      {localizedFlavor}
                     </span>
                     <span className="text-xs font-semibold text-[#384A22]/80 bg-[#ECE8DB] px-3 py-1 rounded-full">
-                      {prod.packageSize}
+                      {localizedSize}
                     </span>
                   </div>
 
@@ -85,7 +88,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                         {prod.name}
                       </h3>
                       <p className="text-xs sm:text-sm text-[#384A22]/70 mt-1">
-                        {prod.flavor} · {isJar ? 'Airtight Glass Jar' : 'Resealable Fresh Pouch'}
+                        {localizedFlavor} · {localizedDesc}
                       </p>
                     </div>
 
@@ -126,17 +129,17 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
           <div className="mt-12 text-center flex flex-col sm:flex-row items-center justify-center gap-4 text-xs sm:text-sm text-[#384A22]/75">
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-[#8B6D3B]" />
-              100% Wildflower Honey & Pure Cultured Butter
+              {t('footer_honey_bullet', '100% Wildflower Honey & Pure Cultured Butter')}
             </span>
             <span className="hidden sm:inline text-[#384A22]/40">•</span>
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-[#B83A2A]" />
-              Authentic Sun-Ripened Chili & Fresh Lime
+              {t('footer_chili_bullet', 'Authentic Sun-Ripened Chili & Fresh Lime')}
             </span>
             <span className="hidden sm:inline text-[#384A22]/40">•</span>
             <span className="inline-flex items-center gap-1.5 font-medium">
               <span className="w-2 h-2 rounded-full bg-[#384A22]" />
-              Single-Origin Kampot Harvest
+              {t('footer_single_bullet', 'Single-Origin Kampot Harvest')}
             </span>
           </div>
         </div>
@@ -158,14 +161,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
             <div>
               <BotenzLogo variant="white" className="h-[96px] w-auto object-contain mb-3" />
               <p className="text-[14px] text-[#8FA85A] font-normal max-w-[260px] leading-snug">
-                The Pride of Kampot, Roasted to Perfection.
+                {t('hero_tagline', 'The Pride of Kampot, Roasted to Perfection.')}
               </p>
             </div>
 
             {/* White Rounded CTA Box */}
             <div className="w-full lg:max-w-[660px] bg-white rounded-[22px] px-6 sm:px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
               <p className="text-[18px] sm:text-[20px] font-semibold text-[#6E8450] leading-snug max-w-[360px]">
-                The Pride of Kampot, Roasted to Perfection. Taste the difference from the first bite.
+                {t('footer_cta_msg', 'The Pride of Kampot, Roasted to Perfection. Taste the difference from the first bite.')}
               </p>
               <button
                 type="button"
@@ -175,7 +178,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                 }}
                 className="px-9 py-3 rounded-full bg-[#6E8450] hover:bg-[#384A22] text-white text-[18px] font-normal transition-colors shrink-0 cursor-pointer"
               >
-                Order Now
+                {t('btn_order_now', 'Order Now')}
               </button>
             </div>
           </div>
@@ -185,126 +188,126 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
             <div className="space-y-3 text-[15px] text-[#F2F0E3]">
               {/* Row 1: Info */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="text-[#9AB87A] font-normal w-14">Info:</span>
+                <span className="text-[#9AB87A] font-normal w-14">{t('footer_sec_info', 'Info:')}</span>
                 <button
                   type="button"
                   onClick={onOpenFeedbackModal}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Contact
+                  {t('footer_contact', 'Contact')}
                 </button>
                 <button
                   type="button"
                   onClick={onOpenFeedbackModal}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Wholesale
+                  {t('footer_wholesale', 'Wholesale')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('rewards')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Affiliate
+                  {t('footer_affiliate', 'Affiliate')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('autoship')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Account
+                  {t('footer_account', 'Account')}
                 </button>
               </div>
 
               {/* Row 2: About */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="text-[#9AB87A] font-normal w-14">About:</span>
+                <span className="text-[#9AB87A] font-normal w-14">{t('footer_sec_about', 'About:')}</span>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Our Way
+                  {t('footer_our_way', 'Our Way')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Blogs
+                  {t('footer_blogs', 'Blogs')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Faq
+                  {t('footer_faq', 'FAQ')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('recipes')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Recipes
+                  {t('nav_recipes', 'Recipes')}
                 </button>
               </div>
 
               {/* Row 3: Shop */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="text-[#9AB87A] font-normal w-14">Shop:</span>
+                <span className="text-[#9AB87A] font-normal w-14">{t('footer_sec_shop', 'Shop:')}</span>
                 <button
                   type="button"
                   onClick={() => onNavigate('shop', 'powders')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Products
+                  {t('footer_products', 'Products')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('shop', 'powders')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Jars
+                  {t('footer_jars', 'Jars')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('shop', 'bundles')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Kits
+                  {t('footer_kits', 'Kits')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('shop', 'accessories')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Gifts
+                  {t('footer_gifts', 'Gifts')}
                 </button>
               </div>
 
               {/* Row 4: More */}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                <span className="text-[#9AB87A] font-normal w-14">More:</span>
+                <span className="text-[#9AB87A] font-normal w-14">{t('footer_sec_more', 'More:')}</span>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Privacy
+                  {t('footer_privacy', 'Privacy')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Terms
+                  {t('footer_terms', 'Terms')}
                 </button>
                 <button
                   type="button"
                   onClick={() => onNavigate('way')}
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
-                  Labs
+                  {t('footer_labs', 'Labs')}
                 </button>
               </div>
             </div>
