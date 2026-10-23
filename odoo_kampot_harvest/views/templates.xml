@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <template id="kampot_store_page" name="Kampot Harvest Co. Storefront">
+        <t t-call="website.layout">
+            <div id="wrap" class="oe_structure">
+                <!-- React App Mount Point -->
+                <div id="root"></div>
+
+                <!-- Google Fonts -->
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet" />
+
+                <!-- Compiled React Storefront Styles and Scripts -->
+                <link rel="stylesheet" href="/odoo_kampot_harvest/static/dist/assets/index-C3VbAUsi.css" />
+                <script type="module" src="/odoo_kampot_harvest/static/dist/assets/index-lV4N6HC0.js"></script>
+            </div>
+        </t>
+    </template>
+</odoo>
