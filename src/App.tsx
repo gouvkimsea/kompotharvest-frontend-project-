@@ -15,7 +15,6 @@ import {
   RecipesPageView,
   ShopPageView,
 } from './components/SubpagesAndModals';
-import { AiSommelierModal } from './components/AiSommelierModal';
 import { BundleItem, Product, RecipeItem } from './data/botenzData';
 import { CartItem, calculateCartSummary } from './utils/storeLogic';
 import { useI18n } from './utils/i18nContext';
@@ -34,7 +33,6 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeItem | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isFirstOrderModalOpen, setIsFirstOrderModalOpen] = useState<boolean>(false);
-  const [isAiSommelierOpen, setIsAiSommelierOpen] = useState<boolean>(false);
 
   // Favorite recipes state
   const [favoriteRecipes, setFavoriteRecipes] = useState<string[]>([
@@ -317,25 +315,6 @@ export default function App() {
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
       />
-
-      {/* Kampot AI Sommelier Assistant Modal */}
-      <AiSommelierModal
-        isOpen={isAiSommelierOpen}
-        onClose={() => setIsAiSommelierOpen(false)}
-        onAddToCart={handleAddProductToCart}
-      />
-
-      {/* Floating AI Sommelier Trigger */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <button
-          type="button"
-          onClick={() => setIsAiSommelierOpen(true)}
-          className="group flex items-center gap-2.5 px-5 py-3.5 rounded-full bg-[#384A22] hover:bg-[#314B1C] text-[#F2F0E3] shadow-xl hover:shadow-2xl border border-[#8B6D3B]/40 transition-all duration-300 hover:scale-105 cursor-pointer"
-        >
-          <span className="w-2.5 h-2.5 rounded-full bg-[#C9A352] animate-ping" />
-          <span className="font-bold text-sm tracking-wide">✨ {t('btn_ask_ai')}</span>
-        </button>
-      </div>
     </div>
   );
 }
