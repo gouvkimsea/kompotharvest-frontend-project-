@@ -26,6 +26,9 @@ import {
   AccountRole,
   hasAccountPermission,
   isAdminAccount,
+  InventoryItem,
+  createInitialInventory,
+  isProductOutOfStock,
 } from './utils/storeLogic';
 import { useI18n } from './utils/i18nContext';
 
@@ -36,6 +39,7 @@ export default function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCodeActive, setPromoCodeActive] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [inventory, setInventory] = useState<InventoryItem[]>(() => createInitialInventory());
 
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -86,6 +90,18 @@ export default function App() {
     return () => window.removeEventListener('hashchange', syncHashRoute);
   }, []);
 
+  // Sync live stock quantities from backend
+  React.useEffect(() => {
+    void fetch('/api/storefront/stock')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.inventory)) {
+          setInventory(data.inventory);
+        }
+      })
+      .catch(() => {});
+  }, [activePage]);
+
   const handleAddProductToCart = (
     product: Product,
     isAutoship: boolean = false,
@@ -93,6 +109,10 @@ export default function App() {
     customPrice?: number
   ) => {
     const resolvedSize = variantLabel || product.packageSize;
+    if (isProductOutOfStock(inventory, product.id, resolvedSize)) {
+      showToast(`${product.name} is currently Out of Stock.`);
+      return;
+    }
     const itemId = `${product.id}-${resolvedSize}-${isAutoship ? 'sub' : 'once'}`;
     const unitPrice = customPrice ?? product.price;
 
@@ -122,6 +142,10 @@ export default function App() {
   };
 
   const handleAddBundleToCart = (bundle: BundleItem) => {
+    if (isProductOutOfStock(inventory, bundle.id)) {
+      showToast(`${bundle.name} is currently Out of Stock.`);
+      return;
+    }
     setCartItems((prev) => {
       const existing = prev.find((i) => i.id === bundle.id);
       if (existing) {
@@ -209,6 +233,7 @@ export default function App() {
                 setSelectedBundle(bundle);
               }}
               onClaimOffer={() => setIsFirstOrderModalOpen(true)}
+              inventory={inventory}
             />
 
             <ComparisonAndProductsSection
@@ -218,6 +243,7 @@ export default function App() {
                 setSelectedBundle(null);
                 setSelectedProduct(product);
               }}
+              inventory={inventory}
             />
 
             <InfluencerAndHowToEnjoySection onNavigate={handleNavigate} />
@@ -243,6 +269,7 @@ export default function App() {
               setSelectedProduct(null);
               setSelectedBundle(bundle);
             }}
+            inventory={inventory}
           />
         )}
 
@@ -282,6 +309,7 @@ export default function App() {
               setAccountModalMode('login');
               setIsAccountModalOpen(true);
             }}
+            onInventoryUpdated={(updatedInventory) => setInventory(updatedInventory)}
             onLogout={() => {
               if (authToken) {
                 void fetch('/api/auth/logout', {
@@ -316,6 +344,7 @@ export default function App() {
           setSelectedProduct(product);
         }}
         onAddProductToCart={(product) => handleAddProductToCart(product)}
+        inventory={inventory}
       />
 
       {/* Floating WhatsApp Support Button (Bottom Right, matching botenz.in) */}
@@ -355,6 +384,7 @@ export default function App() {
         onRemoveItem={handleRemoveItem}
         onClearCart={() => setCartItems([])}
         currentUser={currentUser}
+        onInventoryUpdated={(updatedInventory) => setInventory(updatedInventory)}
         onTrackOrder={(newOrderId) => {
           setTrackedOrderNumber(newOrderId);
           setIsTrackOrderModalOpen(true);
@@ -371,6 +401,7 @@ export default function App() {
         }}
         onAddProductToCart={handleAddProductToCart}
         onAddBundleToCart={handleAddBundleToCart}
+        inventory={inventory}
       />
 
       {/* Recipe Detail Modal */}

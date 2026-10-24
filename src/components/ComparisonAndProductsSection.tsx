@@ -3,11 +3,13 @@ import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
+import { InventoryItem, isProductOutOfStock } from '../utils/storeLogic';
 
 interface ComparisonAndProductsProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
   onAddProductToCart: (product: Product) => void;
   onSelectProduct: (product: Product) => void;
+  inventory?: InventoryItem[];
 }
 
 export const KitchenIconsRow: React.FC<{ className?: string }> = ({ className = 'w-[345px]' }) => {
@@ -36,6 +38,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
   onNavigate,
   onAddProductToCart,
   onSelectProduct,
+  inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   const [carouselOffset, setCarouselOffset] = useState(0);
@@ -219,74 +222,108 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {visibleProducts.map((product) => (
-              <div key={product.id} className="flex flex-col items-center group">
-                {/* Floating Glass Jar + -10% Dark Green Blob Tag */}
+            {visibleProducts.map((product) => {
+              const isOutOfStock = isProductOutOfStock(inventory, product.id);
+              return (
                 <div
-                  onClick={() => onSelectProduct(product)}
-                  className="relative w-[240px] h-[305px] flex items-center justify-center -mb-6 z-10 cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
+                  key={product.id}
+                  data-testid={`showcase-product-card-${product.id}`}
+                  className="flex flex-col items-center group"
                 >
-                  {product.discountBadge && (
-                    <div className="absolute top-2 left-2 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[52px] h-[46px] flex items-center justify-center text-[14px] font-medium shadow-md">
-                      {product.discountBadge}
-                    </div>
-                  )}
-                  <SmartImage
-                    src={product.image}
-                    alt={`${product.name} — ${product.flavor} (${product.packageSize})`}
-                    className="w-full h-full object-contain drop-shadow-2xl"
-                    fallbackBg="transparent"
-                  />
-                </div>
-
-                {/* Cream Rounded Bottom Info Box */}
-                <div className="w-full bg-[#F2F0E3] rounded-[24px] pt-8 pb-5 px-5 text-center shadow-lg border border-[#384A22]/10">
-                  <h4
+                  {/* Floating Glass Jar + -10% Dark Green Blob Tag */}
+                  <div
                     onClick={() => onSelectProduct(product)}
-                    className="text-[17px] font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer truncate"
+                    className="relative w-[240px] h-[305px] flex items-center justify-center -mb-6 z-10 cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
                   >
-                    {product.name}
-                  </h4>
-                  <p className="text-[13.5px] font-semibold text-[#768E5C] mt-0.5">
-                    {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
-                  </p>
-
-                  <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
-                    <span className="text-[22px] font-semibold text-[#384A22]">
-                      {formatPrice(product.price)}
-                    </span>
-                    {product.originalPrice > product.price && (
-                      <span className="text-[13px] text-[#8B6D3B] line-through">
-                        {formatPrice(product.originalPrice)}
+                    {product.discountBadge && (
+                      <div className="absolute top-2 left-2 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[52px] h-[46px] flex items-center justify-center text-[14px] font-medium shadow-md">
+                        {product.discountBadge}
+                      </div>
+                    )}
+                    <SmartImage
+                      src={product.image}
+                      alt={`${product.name} — ${product.flavor} (${product.packageSize})`}
+                      className={`w-full h-full object-contain drop-shadow-2xl ${
+                        isOutOfStock ? 'opacity-80' : ''
+                      }`}
+                      fallbackBg="transparent"
+                    />
+                    {isOutOfStock && (
+                      <span
+                        data-testid={`product-bottom-out-of-stock-${product.id}`}
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
+                      >
+                        Out of Stock
                       </span>
                     )}
-                    <span className="inline-flex items-center gap-1 text-[12.5px] text-[#384A22] ml-1">
-                      <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
-                      {product.rating}
-                    </span>
                   </div>
 
-                  <div className="mt-4 flex items-center justify-center gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => onAddProductToCart(product)}
-                      className="flex-[1.3] py-3.5 px-4 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      {t('btn_add_to_cart')}
-                    </button>
-                    <button
-                      type="button"
+                  {/* Cream Rounded Bottom Info Box */}
+                  <div className="w-full bg-[#F2F0E3] rounded-[24px] pt-8 pb-5 px-5 text-center shadow-lg border border-[#384A22]/10">
+                    <h4
                       onClick={() => onSelectProduct(product)}
-                      className="flex-1 py-2.5 px-3.5 rounded-full border border-[#8B6D3B] text-[#384A22] hover:bg-[#8B6D3B]/10 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                      className="text-[17px] font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer truncate"
                     >
-                      {t('btn_learn_more')}
-                    </button>
+                      {product.name}
+                    </h4>
+                    <p className="text-[13.5px] font-semibold text-[#768E5C] mt-0.5">
+                      {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
+                    </p>
+
+                    {isOutOfStock && (
+                      <p
+                        data-testid={`product-out-of-stock-statement-${product.id}`}
+                        className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mt-1"
+                      >
+                        Product is Out of Stock
+                      </p>
+                    )}
+
+                    <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
+                      <span className="text-[22px] font-semibold text-[#384A22]">
+                        {formatPrice(product.price)}
+                      </span>
+                      {product.originalPrice > product.price && (
+                        <span className="text-[13px] text-[#8B6D3B] line-through">
+                          {formatPrice(product.originalPrice)}
+                        </span>
+                      )}
+                      <span className="inline-flex items-center gap-1 text-[12.5px] text-[#384A22] ml-1">
+                        <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                        {product.rating}
+                      </span>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-center gap-2.5">
+                      <button
+                        type="button"
+                        disabled={isOutOfStock}
+                        data-testid={`showcase-action-btn-${product.id}`}
+                        onClick={() => {
+                          if (!isOutOfStock) onAddProductToCart(product);
+                        }}
+                        className={`flex-[1.3] py-3.5 px-4 rounded-full text-[13.5px] font-medium transition-colors whitespace-nowrap ${
+                          isOutOfStock
+                            ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                            : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                        }`}
+                      >
+                        {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onSelectProduct(product)}
+                        className="flex-1 py-2.5 px-3.5 rounded-full border border-[#8B6D3B] text-[#384A22] hover:bg-[#8B6D3B]/10 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                      >
+                        {t('btn_learn_more')}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </div>

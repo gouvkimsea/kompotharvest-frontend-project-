@@ -15,6 +15,8 @@ import {
   LogOut,
   CheckCircle2,
   Clock,
+  Truck,
+  Undo2,
 } from 'lucide-react';
 import {
   UserAccount,
@@ -22,13 +24,26 @@ import {
   InventoryItem,
   InventoryStats,
   StockMovementRecord,
+  PurchaseOrder,
   createInitialInventory,
+  createInitialPurchaseOrders,
   calculateInventoryStats,
   adjustInventoryStock,
+  reverseStockMovement,
+  receivePurchaseOrderDelivery,
+  approvePurchaseOrder,
+  cancelPurchaseOrder,
+  createPurchaseOrder,
+  LOW_STOCK_RED_THRESHOLD,
+  isLowStockRedHighlight,
+  CreateInventoryProductInput,
+  InventoryCategory,
+  UnitOfMeasure,
+  validateNewInventoryProduct,
+  createInventoryProduct,
 } from '../utils/storeLogic';
 import { useI18n } from '../utils/i18nContext';
 import { SmartImage } from './SmartImage';
-import { BotenzLogo } from './Navbar';
 
 interface AdminInventoryDashboardProps {
   currentUser: UserAccount | null;
@@ -36,6 +51,7 @@ interface AdminInventoryDashboardProps {
   onBackToStore: () => void;
   onOpenSignIn: () => void;
   onLogout: () => void;
+  onInventoryUpdated?: (updatedInventory: InventoryItem[]) => void;
 }
 
 type SortField = 'name_asc' | 'name_desc' | 'stock_asc' | 'stock_desc';
@@ -46,15 +62,18 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
   onBackToStore,
   onOpenSignIn,
   onLogout,
+  onInventoryUpdated,
 }) => {
   const { formatPrice } = useI18n();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [movements, setMovements] = useState<StockMovementRecord[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [apiError, setApiError] = useState<string | null>(null);
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
   const [adjustingItemId, setAdjustingItemId] = useState<string | null>(null);
+  const [processingPoId, setProcessingPoId] = useState<string | null>(null);
 
   // Filters, sorting, and pagination state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -64,7 +83,61 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
   const [currentPage, setCurrentPage] = useState<number>(1);
   const pageSize = 5;
 
+  // Add New Product form state
+  const [isAddProductOpen, setIsAddProductOpen] = useState<boolean>(false);
+  const [isCreatingProduct, setIsCreatingProduct] = useState<boolean>(false);
+  const [newProductForm, setNewProductForm] = useState<{
+    name: string;
+    sku: string;
+    barcode: string;
+    variantLabel: string;
+    category: InventoryCategory;
+    unitOfMeasure: UnitOfMeasure;
+    price: string;
+    unitCost: string;
+    initialStock: string;
+    reorderThreshold: string;
+    image: string;
+  }>({
+    name: '',
+    sku: '',
+    barcode: '',
+    variantLabel: '',
+    category: 'Glass Jars (250g)',
+    unitOfMeasure: '250g Glass Jar',
+    price: '20.00',
+    unitCost: '8.50',
+    initialStock: '25',
+    reorderThreshold: '12',
+    image: '/assets/aistudio/product-honey-butter-jar-250g.png',
+  });
+  const [newProductErrors, setNewProductErrors] = useState<
+    Partial<Record<keyof CreateInventoryProductInput, string>>
+  >({});
+
   const isAuthorizedAdmin = isAdminAccount(currentUser);
+  const onInventoryUpdatedRef = React.useRef(onInventoryUpdated);
+  useEffect(() => {
+    onInventoryUpdatedRef.current = onInventoryUpdated;
+  }, [onInventoryUpdated]);
+
+  const syncInventoryState = useCallback(
+    (
+      nextInventory: InventoryItem[],
+      nextStats?: InventoryStats,
+      nextMovements?: StockMovementRecord[],
+      nextPos?: PurchaseOrder[]
+    ) => {
+      setInventory(nextInventory);
+      setStats(nextStats || calculateInventoryStats(nextInventory));
+      if (nextMovements) setMovements(nextMovements);
+      if (nextPos) setPurchaseOrders(nextPos);
+      if (onInventoryUpdatedRef.current) {
+        onInventoryUpdatedRef.current(nextInventory);
+      }
+    },
+    []
+  );
 
   const fetchInventory = useCallback(async () => {
     if (!isAuthorizedAdmin) {
@@ -97,18 +170,24 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
         return;
       }
 
-      setInventory(data.inventory || []);
-      setStats(data.stats || calculateInventoryStats(data.inventory || []));
-      setMovements(data.movements || []);
+      syncInventoryState(
+        data.inventory || [],
+        data.stats,
+        data.movements || [],
+        data.purchaseOrders || createInitialPurchaseOrders()
+      );
     } catch {
-      // Fallback to calculated business catalog if network request fails while admin is verified
       const fallbackItems = createInitialInventory();
-      setInventory(fallbackItems);
-      setStats(calculateInventoryStats(fallbackItems));
+      syncInventoryState(
+        fallbackItems,
+        calculateInventoryStats(fallbackItems),
+        [],
+        createInitialPurchaseOrders()
+      );
     } finally {
       setIsLoading(false);
     }
-  }, [isAuthorizedAdmin, authToken]);
+  }, [isAuthorizedAdmin, authToken, syncInventoryState]);
 
   useEffect(() => {
     void fetchInventory();
@@ -156,9 +235,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
         return;
       }
 
-      setInventory(data.inventory);
-      setStats(data.stats);
-      setMovements(data.movements || []);
+      syncInventoryState(data.inventory, data.stats, data.movements, data.purchaseOrders);
       setActionFeedback(data.message || 'Stock updated.');
     } catch {
       const localAdjust = adjustInventoryStock(
@@ -166,20 +243,374 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
         itemId,
         quantityDelta,
         type,
-        reason
+        reason,
+        {
+          existingMovements: movements,
+          performedBy: currentUser?.email,
+        }
       );
       if (!localAdjust.success) {
         setApiError(localAdjust.error || 'Unable to update stock level.');
       } else {
-        setInventory(localAdjust.updatedInventory);
-        setStats(calculateInventoryStats(localAdjust.updatedInventory));
-        if (localAdjust.movement) {
-          setMovements((prev) => [localAdjust.movement!, ...prev]);
-        }
+        const nextMovs = localAdjust.movement
+          ? [localAdjust.movement, ...movements]
+          : movements;
+        syncInventoryState(
+          localAdjust.updatedInventory,
+          calculateInventoryStats(localAdjust.updatedInventory),
+          nextMovs
+        );
         setActionFeedback(`Updated stock for ${localAdjust.updatedItem?.name}`);
       }
     } finally {
       setAdjustingItemId(null);
+    }
+  };
+
+  const handleReverseMovement = async (movementId: string) => {
+    if (!isAuthorizedAdmin) return;
+    setApiError(null);
+    setActionFeedback(null);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch('/api/admin/inventory/reverse', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          movementId,
+          reason: `Compensating reversal by ${currentUser?.fullName}`,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setApiError(data.error || 'Could not reverse movement.');
+        return;
+      }
+      syncInventoryState(data.inventory, data.stats, data.movements, data.purchaseOrders);
+      setActionFeedback(data.message || 'Movement reversed via compensating entry.');
+    } catch {
+      const localRev = reverseStockMovement(
+        inventory,
+        movements,
+        movementId,
+        currentUser?.email || 'Kampot Harvest Admin',
+        `Compensating reversal by ${currentUser?.fullName}`
+      );
+      if (!localRev.success) {
+        setApiError(localRev.error || 'Could not reverse movement.');
+      } else {
+        syncInventoryState(
+          localRev.updatedInventory,
+          calculateInventoryStats(localRev.updatedInventory),
+          localRev.updatedMovements
+        );
+        setActionFeedback(`Reversed movement ${movementId}.`);
+      }
+    }
+  };
+
+  const handleReceivePurchaseOrder = async (
+    po: PurchaseOrder,
+    customLines?: Array<{ itemId: string; quantityReceived: number }>
+  ) => {
+    if (!isAuthorizedAdmin) return;
+    setProcessingPoId(po.poId);
+    setApiError(null);
+    setActionFeedback(null);
+
+    const linesToReceive =
+      customLines ||
+      po.items
+        .map((l) => ({
+          itemId: l.itemId,
+          quantityReceived: Math.max(0, l.orderedQty - l.receivedQty),
+        }))
+        .filter((l) => l.quantityReceived > 0);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch(`/api/admin/purchase-orders/${po.poId}/receive`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          receivedLines: linesToReceive,
+          receiptId: `RCPT-${po.poId}-${Date.now()}`,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setApiError(data.error || 'Failed to receive supplier delivery.');
+        setProcessingPoId(null);
+        return;
+      }
+      syncInventoryState(data.inventory, data.stats, data.movements, data.purchaseOrders);
+      setActionFeedback(data.message || `Received delivery for ${po.poId}.`);
+    } catch {
+      const localRes = receivePurchaseOrderDelivery(
+        po,
+        inventory,
+        linesToReceive.map((l) => ({ itemId: l.itemId, acceptedQty: l.quantityReceived })),
+        currentUser,
+        `RCPT-${po.poId}-${Date.now()}`
+      );
+      if (!localRes.success || !localRes.updatedPO) {
+        setApiError(localRes.error || 'Failed to receive supplier delivery.');
+      } else {
+        const nextPos = purchaseOrders.map((p) =>
+          p.poId === localRes.updatedPO!.poId ? localRes.updatedPO! : p
+        );
+        syncInventoryState(
+          localRes.updatedInventory,
+          calculateInventoryStats(localRes.updatedInventory),
+          [...localRes.movements, ...movements],
+          nextPos
+        );
+        setActionFeedback(`Received supplier delivery for ${po.poId}.`);
+      }
+    } finally {
+      setProcessingPoId(null);
+    }
+  };
+
+  const handleApprovePurchaseOrder = async (po: PurchaseOrder) => {
+    if (!isAuthorizedAdmin) return;
+    setProcessingPoId(po.poId);
+    setApiError(null);
+    setActionFeedback(null);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch(`/api/admin/purchase-orders/${po.poId}/approve`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setApiError(data.error || 'Failed to approve purchase order.');
+        setProcessingPoId(null);
+        return;
+      }
+      setPurchaseOrders(data.purchaseOrders || purchaseOrders);
+      setActionFeedback(data.message || `Approved ${po.poId}.`);
+    } catch {
+      const localApp = approvePurchaseOrder(po, currentUser);
+      if (localApp.success && localApp.purchaseOrder) {
+        setPurchaseOrders((prev) =>
+          prev.map((p) => (p.poId === localApp.purchaseOrder!.poId ? localApp.purchaseOrder! : p))
+        );
+        setActionFeedback(`Approved ${po.poId}.`);
+      }
+    } finally {
+      setProcessingPoId(null);
+    }
+  };
+
+  const handleCancelPurchaseOrder = async (po: PurchaseOrder) => {
+    if (!isAuthorizedAdmin) return;
+    setProcessingPoId(po.poId);
+    setApiError(null);
+    setActionFeedback(null);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch(`/api/admin/purchase-orders/${po.poId}/cancel`, {
+        method: 'POST',
+        headers,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setApiError(data.error || 'Failed to cancel purchase order.');
+        setProcessingPoId(null);
+        return;
+      }
+      setPurchaseOrders(data.purchaseOrders || purchaseOrders);
+      setActionFeedback(data.message || `Cancelled ${po.poId}.`);
+    } catch {
+      const localCancel = cancelPurchaseOrder(po, currentUser);
+      if (localCancel.success && localCancel.purchaseOrder) {
+        setPurchaseOrders((prev) =>
+          prev.map((p) =>
+            p.poId === localCancel.purchaseOrder!.poId ? localCancel.purchaseOrder! : p
+          )
+        );
+        setActionFeedback(`Cancelled ${po.poId} (inventory unchanged).`);
+      }
+    } finally {
+      setProcessingPoId(null);
+    }
+  };
+
+  const handleCreateReplenishmentPo = async () => {
+    if (!isAuthorizedAdmin) return;
+    setApiError(null);
+    setActionFeedback(null);
+
+    const lowOrOutItems = inventory.filter((i) => i.stockQuantity <= i.reorderThreshold);
+    const lines =
+      lowOrOutItems.length > 0
+        ? lowOrOutItems.map((i) => ({
+            itemId: i.id,
+            orderedQty: Math.max(25, i.reorderThreshold * 2 - i.stockQuantity),
+            unitCost: i.unitCost,
+          }))
+        : [{ itemId: 'chili-lime-100g-pouch', orderedQty: 50, unitCost: 4.5 }];
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch('/api/admin/purchase-orders', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          supplierName: 'Kampot Cashew Growers Cooperative',
+          lines,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        setApiError(data.error || 'Failed to create replenishment PO.');
+        return;
+      }
+      setPurchaseOrders(data.purchaseOrders || purchaseOrders);
+      setActionFeedback(
+        data.message || `Created draft Purchase Order ${data.purchaseOrder?.poId}.`
+      );
+    } catch {
+      const localPo = createPurchaseOrder(
+        inventory,
+        {
+          supplierName: 'Kampot Cashew Growers Cooperative',
+          items: lines,
+          status: 'draft',
+        },
+        currentUser,
+        purchaseOrders
+      );
+      if (localPo.success && localPo.purchaseOrder) {
+        setPurchaseOrders((prev) => [localPo.purchaseOrder!, ...prev]);
+        setActionFeedback(
+          `Created draft Purchase Order ${localPo.purchaseOrder.poId} (stock unchanged until received).`
+        );
+      }
+    }
+  };
+
+  const handleCreateNewProductSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthorizedAdmin) return;
+    setApiError(null);
+    setActionFeedback(null);
+
+    const payload: CreateInventoryProductInput = {
+      name: newProductForm.name.trim(),
+      sku: newProductForm.sku.trim().toUpperCase(),
+      barcode: newProductForm.barcode.trim() || undefined,
+      variantLabel: newProductForm.variantLabel.trim() || undefined,
+      category: newProductForm.category,
+      unitOfMeasure: newProductForm.unitOfMeasure,
+      price: Number(newProductForm.price),
+      unitCost: Number(newProductForm.unitCost),
+      initialStock: Number(newProductForm.initialStock),
+      reorderThreshold: Number(newProductForm.reorderThreshold),
+      image: newProductForm.image.trim() || undefined,
+    };
+
+    const validation = validateNewInventoryProduct(payload, inventory);
+    if (!validation.valid) {
+      setNewProductErrors(validation.errors);
+      return;
+    }
+
+    setNewProductErrors({});
+    setIsCreatingProduct(true);
+
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (authToken) headers.Authorization = `Bearer ${authToken}`;
+
+      const response = await fetch('/api/admin/inventory/products', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        if (data.fieldErrors) {
+          setNewProductErrors(data.fieldErrors);
+        }
+        setApiError(data.error || 'Could not add new product.');
+        setIsCreatingProduct(false);
+        return;
+      }
+
+      syncInventoryState(data.inventory, data.stats, data.movements, data.purchaseOrders);
+      setActionFeedback(
+        data.message || `Added new product "${data.newItem?.name}" (${data.newItem?.sku}).`
+      );
+      setNewProductForm({
+        name: '',
+        sku: '',
+        barcode: '',
+        variantLabel: '',
+        category: 'Glass Jars (250g)',
+        unitOfMeasure: '250g Glass Jar',
+        price: '20.00',
+        unitCost: '8.50',
+        initialStock: '25',
+        reorderThreshold: '12',
+        image: '/assets/aistudio/product-honey-butter-jar-250g.png',
+      });
+      setIsAddProductOpen(false);
+    } catch {
+      const localCreated = createInventoryProduct(inventory, payload, {
+        actorAccount: currentUser,
+        performedBy: currentUser?.email,
+      });
+      if (!localCreated.success || !localCreated.newItem) {
+        if (localCreated.fieldErrors) {
+          setNewProductErrors(localCreated.fieldErrors);
+        }
+        setApiError(localCreated.error || 'Could not add new product.');
+      } else {
+        const nextMovs = localCreated.movement
+          ? [localCreated.movement, ...movements]
+          : movements;
+        syncInventoryState(
+          localCreated.updatedInventory,
+          calculateInventoryStats(localCreated.updatedInventory),
+          nextMovs
+        );
+        setActionFeedback(
+          `Added "${localCreated.newItem.name}" (SKU: ${localCreated.newItem.sku}) with ${localCreated.newItem.stockQuantity} initial units.`
+        );
+        setNewProductForm({
+          name: '',
+          sku: '',
+          barcode: '',
+          variantLabel: '',
+          category: 'Glass Jars (250g)',
+          unitOfMeasure: '250g Glass Jar',
+          price: '20.00',
+          unitCost: '8.50',
+          initialStock: '25',
+          reorderThreshold: '12',
+          image: '/assets/aistudio/product-honey-butter-jar-250g.png',
+        });
+        setIsAddProductOpen(false);
+      }
+    } finally {
+      setIsCreatingProduct(false);
     }
   };
 
@@ -295,7 +726,20 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAddProductOpen((prev) => !prev);
+                setNewProductErrors({});
+              }}
+              data-testid="toggle-add-product-btn"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-xs font-bold transition-colors cursor-pointer shadow-xs"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{isAddProductOpen ? 'Close Add Product' : 'Add New Product'}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => void fetchInventory()}
@@ -371,8 +815,8 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
             >
               {computedStats.totalProducts}
             </p>
-            <span className="text-xs text-[#384A22]/65 mt-1 block">
-              Active SKUs across all categories
+            <span className="text-xs text-[#384A22]/65 mt-1 block tabular-nums">
+              {computedStats.unitsByMeasure.pouches} pouches · {computedStats.unitsByMeasure.jars} jars · {computedStats.unitsByMeasure.bundles} bundles
             </span>
           </div>
 
@@ -388,7 +832,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               {computedStats.totalStockUnits} units
             </p>
             <span className="text-xs text-[#384A22]/65 mt-1 block tabular-nums">
-              Valuation: {formatPrice(computedStats.totalInventoryValueUSD)}
+              Cost: {formatPrice(computedStats.totalInventoryCostUSD)} · Retail: {formatPrice(computedStats.totalInventoryValueUSD)}
             </span>
           </div>
 
@@ -424,6 +868,376 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
             </span>
           </div>
         </div>
+
+        {/* Add New Product Form Panel (Admin Only) */}
+        {isAddProductOpen && (
+          <div
+            data-testid="add-product-panel"
+            className="bg-white rounded-2xl p-6 border-2 border-[#384A22]/25 shadow-sm space-y-5"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#384A22]/10 pb-4">
+              <div>
+                <h2 className="text-lg font-bold text-[#384A22] flex items-center gap-2">
+                  <Package className="w-5 h-5 text-[#8B6D3B]" />
+                  <span>Add New Product to Catalog &amp; Inventory</span>
+                </h2>
+                <p className="text-xs text-[#384A22]/70 mt-0.5">
+                  Create a new SKU with pricing, unit cost, initial stock level, and reorder threshold.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="autofill-sample-product-btn"
+                  onClick={() => {
+                    setNewProductForm({
+                      name: 'Artisan Roasted Cashews — Kampot Black Pepper (250g Jar)',
+                      sku: `KH-BP-${Math.floor(100 + Math.random() * 899)}J`,
+                      barcode: '',
+                      variantLabel: 'Kampot Black Pepper · 250g Glass Jar',
+                      category: 'Glass Jars (250g)',
+                      unitOfMeasure: '250g Glass Jar',
+                      price: '22.00',
+                      unitCost: '9.50',
+                      initialStock: '35',
+                      reorderThreshold: '15',
+                      image: '/assets/aistudio/product-chilli-lime-jar-250g.png',
+                    });
+                    setNewProductErrors({});
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-[#F2F0E3] hover:bg-[#E5E1CE] text-[#384A22] text-xs font-semibold cursor-pointer"
+                >
+                  Fill Sample Product
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsAddProductOpen(false)}
+                  className="px-3 py-1.5 rounded-lg border border-[#384A22]/20 text-[#384A22] text-xs font-semibold hover:bg-[#384A22]/10 cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleCreateNewProductSubmit} className="space-y-4" noValidate>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Product Name */}
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="new-prod-name"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Product Name *
+                  </label>
+                  <input
+                    id="new-prod-name"
+                    type="text"
+                    data-testid="new-product-name-input"
+                    value={newProductForm.name}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, name: e.target.value });
+                      if (newProductErrors.name) {
+                        setNewProductErrors({ ...newProductErrors, name: undefined });
+                      }
+                    }}
+                    placeholder="e.g. Artisan Roasted Cashews — Sea Salt Caramel (250g Jar)"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.name && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.name}</p>
+                  )}
+                </div>
+
+                {/* SKU */}
+                <div>
+                  <label
+                    htmlFor="new-prod-sku"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    SKU Code *
+                  </label>
+                  <input
+                    id="new-prod-sku"
+                    type="text"
+                    data-testid="new-product-sku-input"
+                    value={newProductForm.sku}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, sku: e.target.value.toUpperCase() });
+                      if (newProductErrors.sku) {
+                        setNewProductErrors({ ...newProductErrors, sku: undefined });
+                      }
+                    }}
+                    placeholder="e.g. KH-SC-250J"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-mono focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.sku && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.sku}</p>
+                  )}
+                </div>
+
+                {/* Barcode (Optional) */}
+                <div>
+                  <label
+                    htmlFor="new-prod-barcode"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    EAN Barcode (Optional)
+                  </label>
+                  <input
+                    id="new-prod-barcode"
+                    type="text"
+                    data-testid="new-product-barcode-input"
+                    value={newProductForm.barcode}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, barcode: e.target.value });
+                      if (newProductErrors.barcode) {
+                        setNewProductErrors({ ...newProductErrors, barcode: undefined });
+                      }
+                    }}
+                    placeholder="Auto-generated if blank"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-mono focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.barcode && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.barcode}</p>
+                  )}
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label
+                    htmlFor="new-prod-category"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Category *
+                  </label>
+                  <select
+                    id="new-prod-category"
+                    data-testid="new-product-category-select"
+                    value={newProductForm.category}
+                    onChange={(e) => {
+                      const cat = e.target.value as InventoryCategory;
+                      const autoUom: UnitOfMeasure =
+                        cat === 'Single Pouches (100g)'
+                          ? '100g Pouch'
+                          : cat === 'Glass Jars (250g)'
+                          ? '250g Glass Jar'
+                          : 'Bundle Box';
+                      const autoImg =
+                        cat === 'Single Pouches (100g)'
+                          ? '/assets/aistudio/product-honey-butter-pouch-100g.png'
+                          : cat === 'Glass Jars (250g)'
+                          ? '/assets/aistudio/product-honey-butter-jar-250g.png'
+                          : '/assets/aistudio/bundle-complete-4pack.png';
+                      setNewProductForm({
+                        ...newProductForm,
+                        category: cat,
+                        unitOfMeasure: autoUom,
+                        image: autoImg,
+                      });
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                  >
+                    <option value="Single Pouches (100g)">Single Pouches (100g)</option>
+                    <option value="Glass Jars (250g)">Glass Jars (250g)</option>
+                    <option value="Value Bundles">Value Bundles</option>
+                  </select>
+                </div>
+
+                {/* Variant Label */}
+                <div>
+                  <label
+                    htmlFor="new-prod-variant"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Variant / Pack Label
+                  </label>
+                  <input
+                    id="new-prod-variant"
+                    type="text"
+                    data-testid="new-product-variant-input"
+                    value={newProductForm.variantLabel}
+                    onChange={(e) =>
+                      setNewProductForm({ ...newProductForm, variantLabel: e.target.value })
+                    }
+                    placeholder="e.g. Sea Salt Caramel · 250g Jar"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                  />
+                </div>
+
+                {/* Selling Price USD */}
+                <div>
+                  <label
+                    htmlFor="new-prod-price"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Selling Price (USD) *
+                  </label>
+                  <input
+                    id="new-prod-price"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    data-testid="new-product-price-input"
+                    value={newProductForm.price}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, price: e.target.value });
+                      if (newProductErrors.price) {
+                        setNewProductErrors({ ...newProductErrors, price: undefined });
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.price && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.price}</p>
+                  )}
+                </div>
+
+                {/* Unit Cost USD */}
+                <div>
+                  <label
+                    htmlFor="new-prod-cost"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Unit Cost (USD) *
+                  </label>
+                  <input
+                    id="new-prod-cost"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    data-testid="new-product-cost-input"
+                    value={newProductForm.unitCost}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, unitCost: e.target.value });
+                      if (newProductErrors.unitCost) {
+                        setNewProductErrors({ ...newProductErrors, unitCost: undefined });
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.unitCost && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.unitCost}</p>
+                  )}
+                </div>
+
+                {/* Initial Stock Quantity */}
+                <div>
+                  <label
+                    htmlFor="new-prod-stock"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Initial Stock Units *
+                  </label>
+                  <input
+                    id="new-prod-stock"
+                    type="number"
+                    step="1"
+                    min="0"
+                    data-testid="new-product-stock-input"
+                    value={newProductForm.initialStock}
+                    onChange={(e) => {
+                      setNewProductForm({ ...newProductForm, initialStock: e.target.value });
+                      if (newProductErrors.initialStock) {
+                        setNewProductErrors({ ...newProductErrors, initialStock: undefined });
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.initialStock && (
+                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.initialStock}</p>
+                  )}
+                </div>
+
+                {/* Reorder Threshold */}
+                <div>
+                  <label
+                    htmlFor="new-prod-threshold"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Reorder Threshold *
+                  </label>
+                  <input
+                    id="new-prod-threshold"
+                    type="number"
+                    step="1"
+                    min="0"
+                    data-testid="new-product-threshold-input"
+                    value={newProductForm.reorderThreshold}
+                    onChange={(e) => {
+                      setNewProductForm({
+                        ...newProductForm,
+                        reorderThreshold: e.target.value,
+                      });
+                      if (newProductErrors.reorderThreshold) {
+                        setNewProductErrors({
+                          ...newProductErrors,
+                          reorderThreshold: undefined,
+                        });
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
+                  />
+                  {newProductErrors.reorderThreshold && (
+                    <p className="text-xs text-[#B83A2A] mt-1">
+                      {newProductErrors.reorderThreshold}
+                    </p>
+                  )}
+                </div>
+
+                {/* Product Image Preset / URL */}
+                <div className="sm:col-span-2">
+                  <label
+                    htmlFor="new-prod-image"
+                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                  >
+                    Product Packaging Image
+                  </label>
+                  <select
+                    id="new-prod-image"
+                    data-testid="new-product-image-select"
+                    value={newProductForm.image}
+                    onChange={(e) =>
+                      setNewProductForm({ ...newProductForm, image: e.target.value })
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                  >
+                    <option value="/assets/aistudio/product-honey-butter-jar-250g.png">
+                      250g Glass Jar — Golden Label
+                    </option>
+                    <option value="/assets/aistudio/product-chilli-lime-jar-250g.png">
+                      250g Glass Jar — Spice Red Label
+                    </option>
+                    <option value="/assets/aistudio/product-honey-butter-pouch-100g.png">
+                      100g Resealable Pouch — Golden Label
+                    </option>
+                    <option value="/assets/aistudio/product-chili-lime-pouch-100g.png">
+                      100g Resealable Pouch — Spice Red Label
+                    </option>
+                    <option value="/assets/aistudio/bundle-complete-4pack.png">
+                      Value Bundle — 4-Pack Collection
+                    </option>
+                    <option value="/assets/aistudio/bundle-jars-duo.png">
+                      Value Bundle — 250g Jar Duo
+                    </option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-3">
+                <button
+                  type="submit"
+                  disabled={isCreatingProduct}
+                  data-testid="submit-new-product-btn"
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{isCreatingProduct ? 'Adding Product...' : 'Add Product to Inventory'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Search, Category Filter, Status Filter, and Sort Bar */}
         <div className="bg-white rounded-2xl p-5 border border-[#384A22]/12 shadow-xs space-y-4">
@@ -532,8 +1346,8 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                     <tr className="border-b border-[#384A22]/10 bg-[#F2F0E3]/60 text-[11px] font-bold uppercase tracking-wider text-[#384A22]/70">
                       <th className="py-3.5 px-4">Product</th>
                       <th className="py-3.5 px-4">SKU &amp; Barcode</th>
-                      <th className="py-3.5 px-4">Category</th>
-                      <th className="py-3.5 px-4">Unit Price</th>
+                      <th className="py-3.5 px-4">Category &amp; UOM</th>
+                      <th className="py-3.5 px-4">Cost / Price</th>
                       <th className="py-3.5 px-4">Stock / Reorder Min</th>
                       <th className="py-3.5 px-4">Status</th>
                       <th className="py-3.5 px-4 text-right">Stock Actions</th>
@@ -542,15 +1356,27 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                   <tbody className="divide-y divide-[#384A22]/10 text-sm">
                     {paginatedItems.map((item) => {
                       const isUpdating = adjustingItemId === item.id;
+                      const isLowStockRed = isLowStockRedHighlight(item.stockQuantity);
                       return (
                         <tr
                           key={item.id}
                           data-testid={`inventory-row-${item.sku}`}
-                          className="hover:bg-[#F2F0E3]/30 transition-colors"
+                          data-low-stock-highlight={isLowStockRed ? 'true' : 'false'}
+                          className={`transition-colors ${
+                            isLowStockRed
+                              ? 'bg-[#B83A2A]/[0.07] hover:bg-[#B83A2A]/[0.12]'
+                              : 'hover:bg-[#F2F0E3]/30'
+                          }`}
                         >
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-xl bg-[#F2F0E3] p-1.5 shrink-0 flex items-center justify-center">
+                              <div
+                                className={`w-12 h-12 rounded-xl p-1.5 shrink-0 flex items-center justify-center ${
+                                  isLowStockRed
+                                    ? 'bg-[#B83A2A]/10 border border-[#B83A2A]/30'
+                                    : 'bg-[#F2F0E3]'
+                                }`}
+                              >
                                 <SmartImage
                                   src={item.image}
                                   alt={item.name}
@@ -559,58 +1385,122 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                                 />
                               </div>
                               <div>
-                                <p className="font-bold text-[#384A22] leading-snug">
-                                  {item.name}
-                                </p>
-                                <p className="text-xs text-[#384A22]/65">
+                                <div className="flex items-center gap-1.5">
+                                  {isLowStockRed && (
+                                    <AlertTriangle
+                                      aria-hidden="true"
+                                      className="w-4 h-4 text-[#B83A2A] shrink-0"
+                                    />
+                                  )}
+                                  <p
+                                    className={`font-bold leading-snug ${
+                                      isLowStockRed ? 'text-[#B83A2A]' : 'text-[#384A22]'
+                                    }`}
+                                  >
+                                    {item.name}
+                                  </p>
+                                </div>
+                                <p
+                                  className={`text-xs ${
+                                    isLowStockRed ? 'text-[#B83A2A]/80' : 'text-[#384A22]/65'
+                                  }`}
+                                >
                                   {item.variantLabel}
+                                  {isLowStockRed &&
+                                    ` · Below ${LOW_STOCK_RED_THRESHOLD} units`}
                                 </p>
                               </div>
                             </div>
                           </td>
 
                           <td className="py-4 px-4 font-mono text-xs">
-                            <span className="font-bold text-[#384A22] block">
+                            <span
+                              className={`font-bold block ${
+                                isLowStockRed ? 'text-[#B83A2A]' : 'text-[#384A22]'
+                              }`}
+                            >
                               {item.sku}
                             </span>
-                            <span className="text-[#384A22]/60 block">
+                            <span
+                              className={`block ${
+                                isLowStockRed ? 'text-[#B83A2A]/75' : 'text-[#384A22]/60'
+                              }`}
+                            >
                               EAN: {item.barcode}
                             </span>
                           </td>
 
-                          <td className="py-4 px-4 text-xs font-semibold text-[#384A22]/85">
-                            {item.category}
+                          <td
+                            className={`py-4 px-4 text-xs font-semibold ${
+                              isLowStockRed ? 'text-[#B83A2A]/90' : 'text-[#384A22]/85'
+                            }`}
+                          >
+                            <span className="block">{item.category}</span>
+                            <span className="text-[11px] opacity-75 block">
+                              UOM: {item.unitOfMeasure || 'Unit'}
+                            </span>
                           </td>
 
-                          <td className="py-4 px-4 font-bold tabular-nums text-[#384A22]">
-                            {formatPrice(item.price)}
+                          <td
+                            className={`py-4 px-4 tabular-nums ${
+                              isLowStockRed ? 'text-[#B83A2A]' : 'text-[#384A22]'
+                            }`}
+                          >
+                            <span className="font-bold block">{formatPrice(item.price)}</span>
+                            <span className="text-[11px] opacity-75 block">
+                              Cost: {formatPrice(item.unitCost ?? 0)}
+                            </span>
                           </td>
 
                           <td className="py-4 px-4 tabular-nums">
-                            <span className="text-base font-extrabold text-[#384A22]">
-                              {item.stockQuantity}
-                            </span>
-                            <span className="text-xs text-[#384A22]/60 block">
+                            <div className="flex items-baseline gap-1.5">
+                              <span
+                                data-testid={`stock-qty-${item.sku}`}
+                                className={`text-base font-extrabold ${
+                                  isLowStockRed ? 'text-[#B83A2A]' : 'text-[#384A22]'
+                                }`}
+                              >
+                                {item.stockQuantity}
+                              </span>
+                              {isLowStockRed && (
+                                <span className="text-[11px] font-bold text-[#B83A2A]">
+                                  (&lt; {LOW_STOCK_RED_THRESHOLD})
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className={`text-xs block ${
+                                isLowStockRed
+                                  ? 'text-[#B83A2A]/80 font-medium'
+                                  : 'text-[#384A22]/60'
+                              }`}
+                            >
                               Min threshold: {item.reorderThreshold} units
                             </span>
                           </td>
 
                           <td className="py-4 px-4">
                             {item.status === 'in_stock' && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#384A22]">
-                                <span className="w-2 h-2 rounded-full bg-[#384A22]" />
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#384A22] whitespace-nowrap">
+                                <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
                                 <span>In Stock</span>
                               </span>
                             )}
                             {item.status === 'low_stock' && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#8B6D3B]">
-                                <span className="w-2 h-2 rounded-full bg-[#8B6D3B]" />
-                                <span>Low Stock</span>
+                              <span
+                                className={`inline-flex items-center gap-1.5 text-xs font-bold whitespace-nowrap ${
+                                  isLowStockRed ? 'text-[#B83A2A]' : 'text-[#8B6D3B]'
+                                }`}
+                              >
+                                <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                                <span>
+                                  {isLowStockRed ? 'Critical Low Stock' : 'Low Stock'}
+                                </span>
                               </span>
                             )}
                             {item.status === 'out_of_stock' && (
-                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B83A2A]">
-                                <span className="w-2 h-2 rounded-full bg-[#B83A2A]" />
+                              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B83A2A] whitespace-nowrap">
+                                <XCircle className="w-3.5 h-3.5 shrink-0" />
                                 <span>Out of Stock</span>
                               </span>
                             )}
@@ -723,7 +1613,126 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
           )}
         </div>
 
-        {/* Recent Stock Movements Log (Sales, Restocks, Returns & Adjustments) */}
+        {/* Supplier Purchase Orders & Receiving Workflow */}
+        <div
+          data-testid="admin-purchase-orders-section"
+          className="bg-white rounded-2xl p-6 border border-[#384A22]/12 shadow-xs space-y-4"
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Truck className="w-4 h-4 text-[#384A22]" />
+              <div>
+                <h2 className="text-base font-bold text-[#384A22]">
+                  Supplier Purchase Orders &amp; Stock Receiving
+                </h2>
+                <p className="text-xs text-[#384A22]/65">
+                  Draft &amp; Approved POs do not inflate on-hand stock until physical delivery is received.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              data-testid="create-replenishment-po-btn"
+              onClick={() => void handleCreateReplenishmentPo()}
+              className="px-4 py-2 rounded-xl bg-[#384A22] hover:bg-[#2B3B18] text-[#F2F0E3] text-xs font-semibold cursor-pointer self-start sm:self-auto"
+            >
+              + Create Replenishment PO
+            </button>
+          </div>
+
+          {purchaseOrders.length === 0 ? (
+            <p className="text-xs text-[#384A22]/65">No supplier purchase orders recorded.</p>
+          ) : (
+            <div className="space-y-3">
+              {purchaseOrders.map((po) => {
+                const isProcessing = processingPoId === po.poId;
+                const canReceive =
+                  po.status === 'approved' || po.status === 'partially_received';
+                return (
+                  <div
+                    key={po.poId}
+                    data-testid={`po-card-${po.poId}`}
+                    className="p-4 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/12 flex flex-col lg:flex-row lg:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold text-[#384A22] text-sm">
+                          {po.poId}
+                        </span>
+                        <span className="font-semibold text-[#384A22]">{po.supplierName}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#384A22]/10 text-[#384A22] font-bold uppercase text-[10px]">
+                          Status: {po.status.replace('_', ' ')}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#8B6D3B]/15 text-[#8B6D3B] font-bold uppercase text-[10px]">
+                          Invoice: {po.invoiceStatus}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[#384A22]/80 pt-1">
+                        {po.items.map((line) => (
+                          <span key={line.itemId} className="tabular-nums">
+                            <strong className="font-mono">{line.sku}</strong>: {line.receivedQty}/
+                            {line.orderedQty} received (@ {formatPrice(line.unitCost)})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      {po.status === 'draft' && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            data-testid={`approve-po-btn-${po.poId}`}
+                            onClick={() => void handleApprovePurchaseOrder(po)}
+                            className="px-3 py-1.5 rounded-lg bg-[#384A22] text-[#F2F0E3] text-xs font-semibold hover:bg-[#2B3B18] cursor-pointer"
+                          >
+                            Approve PO
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            onClick={() => void handleCancelPurchaseOrder(po)}
+                            className="px-3 py-1.5 rounded-lg border border-[#B83A2A]/40 text-[#B83A2A] text-xs font-semibold hover:bg-[#B83A2A]/10 cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      )}
+
+                      {canReceive && (
+                        <>
+                          <button
+                            type="button"
+                            disabled={isProcessing}
+                            data-testid={`receive-po-full-btn-${po.poId}`}
+                            onClick={() => void handleReceivePurchaseOrder(po)}
+                            className="px-3.5 py-1.5 rounded-lg bg-[#384A22] text-[#F2F0E3] text-xs font-semibold hover:bg-[#2B3B18] cursor-pointer"
+                          >
+                            Receive Full Delivery
+                          </button>
+                          {po.status === 'approved' && (
+                            <button
+                              type="button"
+                              disabled={isProcessing}
+                              data-testid={`cancel-po-btn-${po.poId}`}
+                              onClick={() => void handleCancelPurchaseOrder(po)}
+                              className="px-3 py-1.5 rounded-lg border border-[#B83A2A]/40 text-[#B83A2A] text-xs font-semibold hover:bg-[#B83A2A]/10 cursor-pointer"
+                            >
+                              Cancel PO
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Recent Stock Movements Log (Sales, Restocks, Returns, Adjustments & Reversals) */}
         <div className="bg-white rounded-2xl p-6 border border-[#384A22]/12 shadow-xs space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -733,7 +1742,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               </h2>
             </div>
             <span className="text-xs text-[#384A22]/60">
-              Live audit log of stock changes
+              Immutable audit log — use Reverse for compensating adjustments
             </span>
           </div>
 
@@ -743,7 +1752,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
             </p>
           ) : (
             <div className="divide-y divide-[#384A22]/10 text-xs">
-              {movements.slice(0, 8).map((mov) => (
+              {movements.slice(0, 10).map((mov) => (
                 <div
                   key={mov.movementId}
                   className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2"
@@ -756,6 +1765,11 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                     <span className="text-[#384A22]/65 block sm:inline sm:ml-2">
                       ({mov.reason})
                     </span>
+                    {mov.referenceId && (
+                      <span className="font-mono text-[11px] text-[#8B6D3B] ml-2">
+                        Ref: {mov.referenceId}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-3 tabular-nums shrink-0">
                     <span
@@ -773,6 +1787,22 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                     <span className="text-[#384A22]/60">
                       Balance: <strong>{mov.resultingStock}</strong>
                     </span>
+                    {!mov.reversedByMovementId && mov.type !== 'reversal' ? (
+                      <button
+                        type="button"
+                        data-testid={`reverse-mov-btn-${mov.movementId}`}
+                        onClick={() => void handleReverseMovement(mov.movementId)}
+                        title="Create compensating reversal movement"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-[#384A22]/25 hover:bg-[#384A22]/10 text-[#384A22] font-semibold cursor-pointer"
+                      >
+                        <Undo2 className="w-3 h-3" />
+                        <span>Reverse</span>
+                      </button>
+                    ) : mov.reversedByMovementId ? (
+                      <span className="text-[11px] text-[#B83A2A] font-semibold">
+                        Reversed
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               ))}

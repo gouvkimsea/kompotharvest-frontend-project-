@@ -736,6 +736,50 @@ export function hasAccountPermission(
   return account.permissions.includes(permission);
 }
 
+export function promoteAccountToAdmin(
+  targetAccount: UserAccount,
+  actorAccount: UserAccount | null | undefined
+): { success: boolean; account?: UserAccount; error?: string } {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      error: 'Forbidden: Only an authorized administrator can promote an account to admin',
+    };
+  }
+  if (targetAccount.status === 'suspended') {
+    return {
+      success: false,
+      error: 'Cannot promote a suspended account',
+    };
+  }
+  const updated: UserAccount = {
+    ...targetAccount,
+    role: 'admin',
+    status: 'active',
+    verified: true,
+    permissions: getRolePermissions('admin', 'active'),
+  };
+  return { success: true, account: updated };
+}
+
+export function deactivateUserAccount(
+  targetAccount: UserAccount,
+  actorAccount: UserAccount | null | undefined
+): { success: boolean; account?: UserAccount; error?: string } {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      error: 'Forbidden: Only an authorized administrator can deactivate an account',
+    };
+  }
+  const updated: UserAccount = {
+    ...targetAccount,
+    status: 'suspended',
+    permissions: [],
+  };
+  return { success: true, account: updated };
+}
+
 /* ============================================================================
  * BUSINESS INVENTORY MANAGEMENT & STOCK MOVEMENT LOGIC
  * ========================================================================== */
@@ -745,6 +789,7 @@ export type InventoryCategory =
   | 'Single Pouches (100g)'
   | 'Glass Jars (250g)'
   | 'Value Bundles';
+export type UnitOfMeasure = '100g Pouch' | '250g Glass Jar' | 'Bundle Box';
 
 export interface InventoryItem {
   id: string;
@@ -753,24 +798,60 @@ export interface InventoryItem {
   name: string;
   variantLabel: string;
   category: InventoryCategory;
+  unitOfMeasure?: UnitOfMeasure;
+  unitCost?: number;
   price: number;
   stockQuantity: number;
+  reservedQuantity?: number;
+  damagedQuantity?: number;
   reorderThreshold: number;
   status: InventoryStatus;
   image: string;
   lastUpdated: string;
 }
 
+export type StockMovementType =
+  | 'sale'
+  | 'restock'
+  | 'supplier_delivery'
+  | 'return'
+  | 'supplier_return'
+  | 'loss_damage'
+  | 'adjustment'
+  | 'reversal';
+
 export interface StockMovementRecord {
   movementId: string;
+  idempotencyKey?: string;
   itemId: string;
   sku: string;
   productName: string;
-  type: 'sale' | 'restock' | 'return' | 'adjustment';
+  type: StockMovementType;
   quantityDelta: number;
+  previousStock?: number;
   resultingStock: number;
+  unitCost?: number;
+  unitPrice?: number;
   reason: string;
+  performedBy?: string;
+  referenceId?: string;
+  reversedByMovementId?: string;
   timestamp: string;
+}
+
+export interface ReplenishmentItem {
+  id: string;
+  sku: string;
+  name: string;
+  category: InventoryCategory;
+  unitOfMeasure: UnitOfMeasure;
+  stockQuantity: number;
+  reorderThreshold: number;
+  deficit: number;
+  recommendedOrderQty: number;
+  unitCost: number;
+  estimatedRestockCostUSD: number;
+  status: InventoryStatus;
 }
 
 export interface InventoryStats {
@@ -780,6 +861,19 @@ export interface InventoryStats {
   lowStockCount: number;
   outOfStockCount: number;
   totalInventoryValueUSD: number;
+  totalInventoryCostUSD: number;
+  unitsByMeasure: {
+    pouches: number;
+    jars: number;
+    bundles: number;
+  };
+  replenishmentNeeded: ReplenishmentItem[];
+}
+
+export const LOW_STOCK_RED_THRESHOLD = 10;
+
+export function isLowStockRedHighlight(stockQuantity: number): boolean {
+  return Number(stockQuantity) < LOW_STOCK_RED_THRESHOLD;
 }
 
 export function computeInventoryStatus(
@@ -796,7 +890,7 @@ export function computeInventoryStatus(
 }
 
 export function calculateInventoryStats(items: InventoryItem[]): InventoryStats {
-  // Deduplicate by item.id to prevent double-counting
+  // Deduplicate by item.id to prevent double-counting across joins or records
   const uniqueMap = new Map<string, InventoryItem>();
   for (const item of items) {
     if (!uniqueMap.has(item.id)) {
@@ -810,12 +904,39 @@ export function calculateInventoryStats(items: InventoryItem[]): InventoryStats 
   let lowStockCount = 0;
   let outOfStockCount = 0;
   let totalInventoryValueUSD = 0;
+  let totalInventoryCostUSD = 0;
+  const unitsByMeasure = {
+    pouches: 0,
+    jars: 0,
+    bundles: 0,
+  };
+  const replenishmentNeeded: ReplenishmentItem[] = [];
 
   for (const item of uniqueItems) {
-    const qty = Math.max(0, item.stockQuantity);
-    const status = computeInventoryStatus(qty, item.reorderThreshold);
-    totalStockUnits += qty;
-    totalInventoryValueUSD += Number((qty * item.price).toFixed(2));
+    const reserved = Math.max(0, Number(item.reservedQuantity) || 0);
+    const physicalQty = Math.max(0, Number(item.stockQuantity) || 0);
+    const availableQty = Math.max(0, physicalQty - reserved);
+    const status = computeInventoryStatus(availableQty, item.reorderThreshold);
+    const unitCost = Number(item.unitCost ?? Number((item.price * 0.45).toFixed(2)));
+    const uom: UnitOfMeasure =
+      item.unitOfMeasure ||
+      (item.category === 'Single Pouches (100g)'
+        ? '100g Pouch'
+        : item.category === 'Glass Jars (250g)'
+        ? '250g Glass Jar'
+        : 'Bundle Box');
+
+    totalStockUnits += availableQty;
+    totalInventoryValueUSD += Number((availableQty * item.price).toFixed(2));
+    totalInventoryCostUSD += Number((availableQty * unitCost).toFixed(2));
+
+    if (uom === '100g Pouch') {
+      unitsByMeasure.pouches += availableQty;
+    } else if (uom === '250g Glass Jar') {
+      unitsByMeasure.jars += availableQty;
+    } else {
+      unitsByMeasure.bundles += availableQty;
+    }
 
     if (status === 'out_of_stock') {
       outOfStockCount += 1;
@@ -823,6 +944,25 @@ export function calculateInventoryStats(items: InventoryItem[]): InventoryStats 
       lowStockCount += 1;
     } else {
       inStockCount += 1;
+    }
+
+    if (availableQty <= item.reorderThreshold) {
+      const deficit = Math.max(0, item.reorderThreshold - availableQty);
+      const recommendedOrderQty = Math.max(item.reorderThreshold * 2 - availableQty, 10);
+      replenishmentNeeded.push({
+        id: item.id,
+        sku: item.sku,
+        name: item.name,
+        category: item.category,
+        unitOfMeasure: uom,
+        stockQuantity: availableQty,
+        reorderThreshold: item.reorderThreshold,
+        deficit,
+        recommendedOrderQty,
+        unitCost,
+        estimatedRestockCostUSD: Number((recommendedOrderQty * unitCost).toFixed(2)),
+        status,
+      });
     }
   }
 
@@ -833,6 +973,9 @@ export function calculateInventoryStats(items: InventoryItem[]): InventoryStats 
     lowStockCount,
     outOfStockCount,
     totalInventoryValueUSD: Number(totalInventoryValueUSD.toFixed(2)),
+    totalInventoryCostUSD: Number(totalInventoryCostUSD.toFixed(2)),
+    unitsByMeasure,
+    replenishmentNeeded,
   };
 }
 
@@ -844,6 +987,8 @@ export function createInitialInventory(): InventoryItem[] {
     name: string;
     variantLabel: string;
     category: InventoryCategory;
+    unitOfMeasure: UnitOfMeasure;
+    unitCost: number;
     price: number;
     stockQuantity: number;
     reorderThreshold: number;
@@ -856,6 +1001,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan Roasted Cashews — Honey Butter (100g Pouch)',
       variantLabel: 'Honey Butter · 100g Pouch',
       category: 'Single Pouches (100g)',
+      unitOfMeasure: '100g Pouch',
+      unitCost: 4.5,
       price: 10.0,
       stockQuantity: 84,
       reorderThreshold: 20,
@@ -868,8 +1015,10 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan Roasted Cashews — Chili Lime (100g Pouch)',
       variantLabel: 'Chili Lime · 100g Pouch',
       category: 'Single Pouches (100g)',
+      unitOfMeasure: '100g Pouch',
+      unitCost: 4.5,
       price: 10.0,
-      stockQuantity: 14,
+      stockQuantity: 0,
       reorderThreshold: 20,
       image: '/assets/aistudio/product-chili-lime-pouch-100g.png',
     },
@@ -880,6 +1029,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan Roasted Cashews — Honey Butter (250g Jar)',
       variantLabel: 'Honey Butter · 250g Glass Jar',
       category: 'Glass Jars (250g)',
+      unitOfMeasure: '250g Glass Jar',
+      unitCost: 8.5,
       price: 20.0,
       stockQuantity: 62,
       reorderThreshold: 15,
@@ -892,6 +1043,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan Roasted Cashews — Chili Lime (250g Jar)',
       variantLabel: 'Chili Lime · 250g Glass Jar',
       category: 'Glass Jars (250g)',
+      unitOfMeasure: '250g Glass Jar',
+      unitCost: 8.5,
       price: 20.0,
       stockQuantity: 9,
       reorderThreshold: 15,
@@ -904,6 +1057,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'The Complete Collection (4-Pack Tasting Bundle)',
       variantLabel: '2× 250g Jars + 2× 100g Pouches',
       category: 'Value Bundles',
+      unitOfMeasure: 'Bundle Box',
+      unitCost: 19.0,
       price: 45.0,
       stockQuantity: 28,
       reorderThreshold: 10,
@@ -916,6 +1071,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan 250g Jar Duo',
       variantLabel: 'Honey Butter + Chili Lime (250g Jars)',
       category: 'Value Bundles',
+      unitOfMeasure: 'Bundle Box',
+      unitCost: 13.0,
       price: 30.0,
       stockQuantity: 0,
       reorderThreshold: 10,
@@ -928,6 +1085,8 @@ export function createInitialInventory(): InventoryItem[] {
       name: 'Artisan 100g Pouch Duo',
       variantLabel: 'Honey Butter + Chili Lime (100g Pouches)',
       category: 'Value Bundles',
+      unitOfMeasure: 'Bundle Box',
+      unitCost: 6.5,
       price: 15.0,
       stockQuantity: 45,
       reorderThreshold: 12,
@@ -938,9 +1097,264 @@ export function createInitialInventory(): InventoryItem[] {
   const timestamp = '2026-10-24T05:00:00.000Z';
   return initialSeeds.map((seed) => ({
     ...seed,
+    reservedQuantity: 0,
+    damagedQuantity: 0,
     status: computeInventoryStatus(seed.stockQuantity, seed.reorderThreshold),
     lastUpdated: timestamp,
   }));
+}
+
+const VARIANT_TO_INVENTORY_ID_MAP: Record<string, string> = {
+  'hb-pouch-100': 'honey-butter-100g-pouch',
+  'hb-pouch-100-alt': 'honey-butter-100g-pouch',
+  'hb-jar-250': 'honey-butter-250g-jar',
+  'hb-jar-250-main': 'honey-butter-250g-jar',
+  'cl-pouch-100': 'chili-lime-100g-pouch',
+  'cl-pouch-100-alt': 'chili-lime-100g-pouch',
+  'cl-jar-250': 'chilli-lime-250g-jar',
+  'cl-jar-250-main': 'chilli-lime-250g-jar',
+};
+
+export function resolveInventoryItemId(productOrVariantId: string): string {
+  const cleaned = (productOrVariantId || '')
+    .trim()
+    .split('__')[0]
+    .replace(/-(100g Pouch|250g Jar)-(sub|once)$/i, '');
+  return VARIANT_TO_INVENTORY_ID_MAP[cleaned] || cleaned;
+}
+
+export function getProductStockQuantity(
+  first: string | InventoryItem[],
+  second: InventoryItem[] | string,
+  variantLabel?: string
+): number {
+  const inventory = Array.isArray(first) ? first : Array.isArray(second) ? second : [];
+  const rawId = typeof first === 'string' ? first : typeof second === 'string' ? second : '';
+  if (!inventory || inventory.length === 0 || !rawId) {
+    return 0;
+  }
+
+  let resolvedId = resolveInventoryItemId(rawId);
+  if (variantLabel) {
+    const isHoney = resolvedId.includes('honey-butter');
+    const isChili = resolvedId.includes('chili-lime') || resolvedId.includes('chilli-lime');
+    if (isHoney && variantLabel.includes('250g')) {
+      resolvedId = 'honey-butter-250g-jar';
+    } else if (isHoney && variantLabel.includes('100g')) {
+      resolvedId = 'honey-butter-100g-pouch';
+    } else if (isChili && variantLabel.includes('250g')) {
+      resolvedId = 'chilli-lime-250g-jar';
+    } else if (isChili && variantLabel.includes('100g')) {
+      resolvedId = 'chili-lime-100g-pouch';
+    }
+  }
+
+  const found = inventory.find(
+    (item) =>
+      item.id === resolvedId ||
+      item.sku.toLowerCase() === resolvedId.toLowerCase()
+  );
+  if (!found) return 0;
+  const reserved = Math.max(0, Number(found.reservedQuantity) || 0);
+  return Math.max(0, (Number(found.stockQuantity) || 0) - reserved);
+}
+
+export function isProductOutOfStock(
+  first: string | InventoryItem[],
+  second: InventoryItem[] | string,
+  variantLabel?: string
+): boolean {
+  return getProductStockQuantity(first, second, variantLabel) <= 0;
+}
+
+export function getProductAvailabilityLabel(
+  first: string | InventoryItem[],
+  second: InventoryItem[] | string,
+  variantLabel?: string
+): string {
+  const qty = getProductStockQuantity(first, second, variantLabel);
+  if (qty <= 0) {
+    return 'Out of Stock';
+  }
+  if (qty < LOW_STOCK_RED_THRESHOLD) {
+    return `Only ${qty} left in stock`;
+  }
+  return 'In Stock';
+}
+
+export function validateAndProcessSale(
+  inventory: InventoryItem[],
+  cartItems: CartItem[],
+  orderId: string,
+  options?: {
+    idempotencyKey?: string;
+    existingMovements?: StockMovementRecord[];
+    performedBy?: string;
+    promoCodeActive?: boolean;
+  }
+): {
+  success: boolean;
+  updatedInventory: InventoryItem[];
+  movements: StockMovementRecord[];
+  validatedItems?: CartItem[];
+  validatedSummary?: CartSummary;
+  error?: string;
+  duplicate?: boolean;
+} {
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Order must contain at least one valid item',
+    };
+  }
+
+  // Prevent duplicate processing when the same idempotencyKey or orderId has already been processed
+  if (options?.existingMovements && options.existingMovements.length > 0) {
+    const duplicateMatch = options.existingMovements.find(
+      (m) =>
+        m.type === 'sale' &&
+        ((options.idempotencyKey && m.idempotencyKey === options.idempotencyKey) ||
+          m.referenceId === orderId)
+    );
+    if (duplicateMatch) {
+      return {
+        success: false,
+        duplicate: true,
+        updatedInventory: inventory,
+        movements: [],
+        error: `Duplicate sale request detected for ${options.idempotencyKey || orderId}`,
+      };
+    }
+  }
+
+  // Step 1: Aggregate requested quantities per inventory item & validate every product first
+  const aggregatedDemand = new Map<string, { target: InventoryItem; totalQty: number }>();
+  const validatedItems: CartItem[] = [];
+
+  for (const cartItem of cartItems) {
+    const rawQty = Number(cartItem.quantity);
+    if (!Number.isFinite(rawQty) || rawQty <= 0 || !Number.isInteger(rawQty)) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: `Invalid quantity (${cartItem.quantity}) for item ${cartItem.name || cartItem.id}`,
+      };
+    }
+
+    const resolvedId = resolveInventoryItemId(cartItem.id);
+    // Also check if variantLabel specifies '250g Jar' or '100g Pouch' on a base product
+    let target = inventory.find(
+      (inv) =>
+        inv.id === resolvedId ||
+        inv.sku.toLowerCase() === resolvedId.toLowerCase() ||
+        inv.name.toLowerCase() === (cartItem.name || '').toLowerCase()
+    );
+
+    if (target && cartItem.variantLabel) {
+      const isHoney = target.id.includes('honey-butter');
+      const isChili = target.id.includes('chili-lime') || target.id.includes('chilli-lime');
+      if (isHoney && cartItem.variantLabel.includes('250g')) {
+        target = inventory.find((i) => i.id === 'honey-butter-250g-jar') || target;
+      } else if (isHoney && cartItem.variantLabel.includes('100g')) {
+        target = inventory.find((i) => i.id === 'honey-butter-100g-pouch') || target;
+      } else if (isChili && cartItem.variantLabel.includes('250g')) {
+        target = inventory.find((i) => i.id === 'chilli-lime-250g-jar') || target;
+      } else if (isChili && cartItem.variantLabel.includes('100g')) {
+        target = inventory.find((i) => i.id === 'chili-lime-100g-pouch') || target;
+      }
+    }
+
+    if (!target) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: `Product "${cartItem.name || cartItem.id}" does not exist in inventory`,
+      };
+    }
+
+    const currentEntry = aggregatedDemand.get(target.id);
+    const nextTotal = (currentEntry?.totalQty || 0) + rawQty;
+    const availableStock = Math.max(
+      0,
+      target.stockQuantity - (target.reservedQuantity || 0)
+    );
+
+    if (nextTotal > availableStock) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error:
+          availableStock <= 0
+            ? `${target.name} is currently Out of Stock (0 available)`
+            : `Insufficient stock for ${target.name}: requested ${nextTotal}, only ${availableStock} available`,
+      };
+    }
+
+    aggregatedDemand.set(target.id, { target, totalQty: nextTotal });
+
+    // Enforce trusted server-side catalog pricing
+    validatedItems.push({
+      ...cartItem,
+      price: target.price,
+      originalPrice: Math.max(target.price, cartItem.originalPrice || target.price),
+      quantity: rawQty,
+    });
+  }
+
+  // Step 2: All validations passed — apply atomic stock deductions
+  const now = new Date().toISOString();
+  const movements: StockMovementRecord[] = [];
+  const nextInventory = inventory.map((item) => {
+    const demand = aggregatedDemand.get(item.id);
+    if (!demand) return { ...item };
+
+    const previousStock = item.stockQuantity;
+    const newStock = previousStock - demand.totalQty;
+    const updatedItem: InventoryItem = {
+      ...item,
+      stockQuantity: newStock,
+      status: computeInventoryStatus(newStock, item.reorderThreshold),
+      lastUpdated: now,
+    };
+
+    movements.push({
+      movementId: `MOV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}-${item.sku}`,
+      idempotencyKey: options?.idempotencyKey,
+      itemId: item.id,
+      sku: item.sku,
+      productName: item.name,
+      type: 'sale',
+      quantityDelta: -demand.totalQty,
+      previousStock,
+      resultingStock: newStock,
+      unitCost: item.unitCost,
+      unitPrice: item.price,
+      reason: `Completed Order ${orderId}`,
+      performedBy: options?.performedBy || 'Customer Checkout',
+      referenceId: orderId,
+      timestamp: now,
+    });
+
+    return updatedItem;
+  });
+
+  const validatedSummary = calculateCartSummary(
+    validatedItems,
+    Boolean(options?.promoCodeActive)
+  );
+
+  return {
+    success: true,
+    updatedInventory: nextInventory,
+    movements,
+    validatedItems,
+    validatedSummary,
+  };
 }
 
 export function applyInventoryOrderDeduction(
@@ -951,6 +1365,15 @@ export function applyInventoryOrderDeduction(
   updatedInventory: InventoryItem[];
   movements: StockMovementRecord[];
 } {
+  const res = validateAndProcessSale(inventory, cartItems, orderId);
+  if (res.success) {
+    return {
+      updatedInventory: res.updatedInventory,
+      movements: res.movements,
+    };
+  }
+
+  // Fallback for legacy calls where partial clamp was expected
   const now = new Date().toISOString();
   const movements: StockMovementRecord[] = [];
   const nextInventory = inventory.map((item) => ({ ...item }));
@@ -959,8 +1382,7 @@ export function applyInventoryOrderDeduction(
     const qtyToDeduct = Math.max(0, Number(cartItem.quantity) || 0);
     if (qtyToDeduct <= 0) continue;
 
-    // Match by exact id or prefix id (for variant ids like honey-butter-100g-pouch__hb-pouch-100)
-    const baseId = cartItem.id.split('__')[0];
+    const baseId = resolveInventoryItemId(cartItem.id);
     const target = nextInventory.find(
       (inv) =>
         inv.id === cartItem.id ||
@@ -984,8 +1406,10 @@ export function applyInventoryOrderDeduction(
           productName: target.name,
           type: 'sale',
           quantityDelta: -actualDeducted,
+          previousStock,
           resultingStock: newStock,
           reason: `Completed Order ${orderId}`,
+          referenceId: orderId,
           timestamp: now,
         });
       }
@@ -1002,8 +1426,14 @@ export function adjustInventoryStock(
   inventory: InventoryItem[],
   itemId: string,
   quantityDelta: number,
-  type: 'restock' | 'return' | 'adjustment' = 'adjustment',
-  reason = 'Admin inventory update'
+  type: StockMovementType = 'adjustment',
+  reason = 'Admin inventory update',
+  options?: {
+    performedBy?: string;
+    referenceId?: string;
+    idempotencyKey?: string;
+    existingMovements?: StockMovementRecord[];
+  }
 ): {
   success: boolean;
   updatedInventory: InventoryItem[];
@@ -1012,12 +1442,43 @@ export function adjustInventoryStock(
   error?: string;
 } {
   const delta = Number(quantityDelta);
-  if (!Number.isFinite(delta) || delta === 0) {
+  if (!Number.isFinite(delta) || delta === 0 || !Number.isInteger(delta)) {
     return {
       success: false,
       updatedInventory: inventory,
-      error: 'Adjustment quantity must be a non-zero number',
+      error: 'Adjustment quantity must be a non-zero whole number',
     };
+  }
+
+  // Prevent duplicate transaction processing when idempotencyKey matches an existing movement
+  if (options?.idempotencyKey && options.existingMovements) {
+    const dup = options.existingMovements.find(
+      (m) => m.idempotencyKey === options.idempotencyKey
+    );
+    if (dup) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        error: `Duplicate transaction rejected (idempotency key: ${options.idempotencyKey})`,
+      };
+    }
+  }
+
+  // Prevent duplicate customer return restocking for the same return referenceId + itemId
+  if (type === 'return' && options?.referenceId && options.existingMovements) {
+    const dupReturn = options.existingMovements.find(
+      (m) =>
+        m.type === 'return' &&
+        m.referenceId === options.referenceId &&
+        (m.itemId === itemId || m.sku.toLowerCase() === itemId.toLowerCase())
+    );
+    if (dupReturn) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        error: `Return ${options.referenceId} for item ${itemId} has already been restocked`,
+      };
+    }
   }
 
   const targetIndex = inventory.findIndex(
@@ -1032,7 +1493,8 @@ export function adjustInventoryStock(
   }
 
   const currentItem = inventory[targetIndex];
-  const nextStock = currentItem.stockQuantity + delta;
+  const previousStock = currentItem.stockQuantity;
+  const nextStock = previousStock + delta;
   if (nextStock < 0) {
     return {
       success: false,
@@ -1045,6 +1507,10 @@ export function adjustInventoryStock(
   const updatedItem: InventoryItem = {
     ...currentItem,
     stockQuantity: nextStock,
+    damagedQuantity:
+      type === 'loss_damage' && delta < 0
+        ? (currentItem.damagedQuantity || 0) + Math.abs(delta)
+        : currentItem.damagedQuantity || 0,
     status: computeInventoryStatus(nextStock, currentItem.reorderThreshold),
     lastUpdated: now,
   };
@@ -1055,13 +1521,19 @@ export function adjustInventoryStock(
 
   const movement: StockMovementRecord = {
     movementId: `MOV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+    idempotencyKey: options?.idempotencyKey,
     itemId: updatedItem.id,
     sku: updatedItem.sku,
     productName: updatedItem.name,
     type,
     quantityDelta: delta,
+    previousStock,
     resultingStock: nextStock,
+    unitCost: updatedItem.unitCost,
+    unitPrice: updatedItem.price,
     reason: reason.trim() || 'Admin stock adjustment',
+    performedBy: options?.performedBy || 'Kampot Harvest Admin',
+    referenceId: options?.referenceId,
     timestamp: now,
   };
 
@@ -1073,5 +1545,716 @@ export function adjustInventoryStock(
   };
 }
 
+export function reverseStockMovement(
+  inventory: InventoryItem[],
+  movements: StockMovementRecord[],
+  movementIdToReverse: string,
+  performedBy: string,
+  reason = 'Compensating reversal transaction'
+): {
+  success: boolean;
+  updatedInventory: InventoryItem[];
+  updatedMovements: StockMovementRecord[];
+  reversalMovement?: StockMovementRecord;
+  error?: string;
+} {
+  const original = movements.find((m) => m.movementId === movementIdToReverse);
+  if (!original) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      updatedMovements: movements,
+      error: `Stock movement ${movementIdToReverse} not found`,
+    };
+  }
+  if (original.type === 'reversal') {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      updatedMovements: movements,
+      error: 'Cannot reverse a reversal transaction',
+    };
+  }
+  const alreadyReversed = movements.some(
+    (m) => m.type === 'reversal' && m.referenceId === movementIdToReverse
+  );
+  if (alreadyReversed || original.reversedByMovementId) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      updatedMovements: movements,
+      error: `Movement ${movementIdToReverse} has already been reversed`,
+    };
+  }
 
+  const compensatingDelta = -original.quantityDelta;
+  const adjustRes = adjustInventoryStock(
+    inventory,
+    original.itemId,
+    compensatingDelta,
+    'reversal',
+    `${reason} (Reversal of ${original.movementId})`,
+    {
+      performedBy,
+      referenceId: original.movementId,
+    }
+  );
+
+  if (!adjustRes.success || !adjustRes.movement) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      updatedMovements: movements,
+      error: adjustRes.error || 'Failed to apply compensating reversal',
+    };
+  }
+
+  // Keep historical movement values intact; only link reversedByMovementId metadata
+  const updatedMovements = [
+    adjustRes.movement,
+    ...movements.map((m) =>
+      m.movementId === original.movementId
+        ? { ...m, reversedByMovementId: adjustRes.movement!.movementId }
+        : m
+    ),
+  ];
+
+  return {
+    success: true,
+    updatedInventory: adjustRes.updatedInventory,
+    updatedMovements,
+    reversalMovement: adjustRes.movement,
+  };
+}
+
+/* ============================================================================
+ * PURCHASING & SUPPLIER RECEIVING WORKFLOW
+ * ========================================================================== */
+
+export type PurchaseOrderStatus =
+  | 'draft'
+  | 'submitted'
+  | 'approved'
+  | 'partially_received'
+  | 'received'
+  | 'cancelled';
+
+export type SupplierInvoiceStatus = 'unbilled' | 'invoiced' | 'paid';
+
+export interface PurchaseOrderItem {
+  itemId: string;
+  sku: string;
+  productName: string;
+  orderedQty: number;
+  receivedQty: number;
+  unitCost: number;
+}
+
+export interface PurchaseOrder {
+  poId: string;
+  supplierName: string;
+  status: PurchaseOrderStatus;
+  invoiceStatus: SupplierInvoiceStatus;
+  createdBy: string;
+  approvedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: PurchaseOrderItem[];
+  totalCostUSD: number;
+  processedReceiptIds: string[];
+  notes?: string;
+}
+
+export function createInitialPurchaseOrders(): PurchaseOrder[] {
+  return [
+    {
+      poId: 'PO-2026-401',
+      supplierName: 'Kampot Organic Cashew Cooperative',
+      status: 'approved',
+      invoiceStatus: 'invoiced',
+      createdBy: 'Kampot Harvest Admin',
+      approvedBy: 'Kampot Harvest Admin',
+      createdAt: '2026-10-23T09:00:00.000Z',
+      updatedAt: '2026-10-23T10:30:00.000Z',
+      items: [
+        {
+          itemId: 'chili-lime-100g-pouch',
+          sku: 'KH-CL-100P',
+          productName: 'Artisan Roasted Cashews — Chili Lime (100g Pouch)',
+          orderedQty: 50,
+          receivedQty: 0,
+          unitCost: 4.5,
+        },
+        {
+          itemId: 'bundle-nut-lovers',
+          sku: 'KH-BND-250D',
+          productName: 'Artisan 250g Jar Duo',
+          orderedQty: 30,
+          receivedQty: 0,
+          unitCost: 13.0,
+        },
+      ],
+      totalCostUSD: Number((50 * 4.5 + 30 * 13.0).toFixed(2)),
+      processedReceiptIds: [],
+      notes: 'Urgent replenishment for out-of-stock SKUs',
+    },
+  ];
+}
+
+export function createPurchaseOrder(
+  inventory: InventoryItem[],
+  input: {
+    supplierName: string;
+    items: Array<{ itemId: string; orderedQty: number; unitCost?: number }>;
+    status?: 'draft' | 'submitted';
+    notes?: string;
+  },
+  actorAccount: UserAccount | null | undefined,
+  existingOrders: PurchaseOrder[] = []
+): {
+  success: boolean;
+  purchaseOrder?: PurchaseOrder;
+  error?: string;
+} {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      error: 'Forbidden: Only authorized administrators can create purchase orders',
+    };
+  }
+  if (!input.supplierName || input.supplierName.trim().length < 2) {
+    return {
+      success: false,
+      error: 'Supplier name is required',
+    };
+  }
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    return {
+      success: false,
+      error: 'Purchase order must contain at least one product line item',
+    };
+  }
+
+  const poItems: PurchaseOrderItem[] = [];
+  let totalCostUSD = 0;
+
+  for (const line of input.items) {
+    const qty = Number(line.orderedQty);
+    if (!Number.isFinite(qty) || qty <= 0 || !Number.isInteger(qty)) {
+      return {
+        success: false,
+        error: 'Ordered quantity must be a positive whole number',
+      };
+    }
+
+    const invItem = inventory.find(
+      (i) => i.id === line.itemId || i.sku.toLowerCase() === line.itemId.toLowerCase()
+    );
+    if (!invItem) {
+      return {
+        success: false,
+        error: `Product ${line.itemId} not found in catalog`,
+      };
+    }
+
+    const unitCost =
+      line.unitCost !== undefined && Number(line.unitCost) > 0
+        ? Number(line.unitCost)
+        : invItem.unitCost || Number((invItem.price * 0.45).toFixed(2));
+
+    poItems.push({
+      itemId: invItem.id,
+      sku: invItem.sku,
+      productName: invItem.name,
+      orderedQty: qty,
+      receivedQty: 0,
+      unitCost,
+    });
+    totalCostUSD += qty * unitCost;
+  }
+
+  const now = new Date().toISOString();
+  const poId = `PO-2026-${400 + existingOrders.length + 1}`;
+  const purchaseOrder: PurchaseOrder = {
+    poId,
+    supplierName: input.supplierName.trim(),
+    status: input.status || 'submitted',
+    invoiceStatus: 'unbilled',
+    createdBy: actorAccount!.fullName,
+    createdAt: now,
+    updatedAt: now,
+    items: poItems,
+    totalCostUSD: Number(totalCostUSD.toFixed(2)),
+    processedReceiptIds: [],
+    notes: input.notes?.trim() || undefined,
+  };
+
+  return {
+    success: true,
+    purchaseOrder,
+  };
+}
+
+export function approvePurchaseOrder(
+  po: PurchaseOrder,
+  actorAccount: UserAccount | null | undefined
+): {
+  success: boolean;
+  purchaseOrder?: PurchaseOrder;
+  error?: string;
+} {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      error: 'Forbidden: Only authorized administrators can approve purchase orders',
+    };
+  }
+  if (po.status === 'cancelled') {
+    return {
+      success: false,
+      error: 'Cannot approve a cancelled purchase order',
+    };
+  }
+  if (po.status === 'received' || po.status === 'partially_received') {
+    return {
+      success: false,
+      error: 'Purchase order is already approved and in receiving',
+    };
+  }
+
+  return {
+    success: true,
+    purchaseOrder: {
+      ...po,
+      status: 'approved',
+      approvedBy: actorAccount!.fullName,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}
+
+export function cancelPurchaseOrder(
+  po: PurchaseOrder,
+  actorAccount: UserAccount | null | undefined
+): {
+  success: boolean;
+  purchaseOrder?: PurchaseOrder;
+  error?: string;
+} {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      error: 'Forbidden: Only authorized administrators can cancel purchase orders',
+    };
+  }
+  const anyReceived = po.items.some((item) => item.receivedQty > 0);
+  if (anyReceived || po.status === 'received' || po.status === 'partially_received') {
+    return {
+      success: false,
+      error: 'Cannot cancel a purchase order that has already received stock deliveries',
+    };
+  }
+
+  return {
+    success: true,
+    purchaseOrder: {
+      ...po,
+      status: 'cancelled',
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}
+
+export function receivePurchaseOrderDelivery(
+  po: PurchaseOrder,
+  inventory: InventoryItem[],
+  deliveries: Array<{ itemId: string; acceptedQty: number }>,
+  actorAccount: UserAccount | null | undefined,
+  receiptId?: string
+): {
+  success: boolean;
+  updatedPO?: PurchaseOrder;
+  updatedInventory: InventoryItem[];
+  movements: StockMovementRecord[];
+  error?: string;
+} {
+  if (!isAdminAccount(actorAccount)) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Forbidden: Only authorized staff can record supplier deliveries',
+    };
+  }
+  if (po.status === 'cancelled') {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Cannot receive delivery for a cancelled purchase order',
+    };
+  }
+  if (po.status === 'draft' || po.status === 'submitted') {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Purchase order must be approved before receiving stock',
+    };
+  }
+  if (po.status === 'received') {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Purchase order has already been fully received',
+    };
+  }
+  if (receiptId && po.processedReceiptIds.includes(receiptId)) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: `Duplicate delivery receipt (${receiptId}) rejected`,
+    };
+  }
+  if (!Array.isArray(deliveries) || deliveries.length === 0) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'Delivery must specify at least one accepted product quantity',
+    };
+  }
+
+  let currentInventory = inventory.map((i) => ({ ...i }));
+  const updatedPOItems = po.items.map((i) => ({ ...i }));
+  const movements: StockMovementRecord[] = [];
+  let totalAcceptedInBatch = 0;
+
+  for (const d of deliveries) {
+    const acceptedQty = Number(d.acceptedQty);
+    if (!Number.isFinite(acceptedQty) || acceptedQty < 0 || !Number.isInteger(acceptedQty)) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: 'Accepted delivery quantity must be a non-negative whole number',
+      };
+    }
+    if (acceptedQty === 0) continue;
+
+    const poLine = updatedPOItems.find(
+      (line) =>
+        line.itemId === d.itemId || line.sku.toLowerCase() === d.itemId.toLowerCase()
+    );
+    if (!poLine) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: `Item ${d.itemId} is not part of purchase order ${po.poId}`,
+      };
+    }
+
+    const remainingQty = poLine.orderedQty - poLine.receivedQty;
+    if (acceptedQty > remainingQty) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: `Accepted quantity (${acceptedQty}) exceeds remaining open quantity (${remainingQty}) for ${poLine.productName}`,
+      };
+    }
+
+    const adjustRes = adjustInventoryStock(
+      currentInventory,
+      poLine.itemId,
+      acceptedQty,
+      'supplier_delivery',
+      `PO ${po.poId} Delivery from ${po.supplierName}`,
+      {
+        performedBy: actorAccount!.fullName,
+        referenceId: po.poId,
+        idempotencyKey: receiptId ? `${receiptId}-${poLine.itemId}` : undefined,
+      }
+    );
+
+    if (!adjustRes.success || !adjustRes.movement) {
+      return {
+        success: false,
+        updatedInventory: inventory,
+        movements: [],
+        error: adjustRes.error || 'Failed to update stock on PO receipt',
+      };
+    }
+
+    currentInventory = adjustRes.updatedInventory;
+    poLine.receivedQty += acceptedQty;
+    totalAcceptedInBatch += acceptedQty;
+    movements.push(adjustRes.movement);
+  }
+
+  if (totalAcceptedInBatch <= 0) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      movements: [],
+      error: 'At least one item must have a positive accepted quantity (> 0)',
+    };
+  }
+
+  const allFullyReceived = updatedPOItems.every(
+    (line) => line.receivedQty >= line.orderedQty
+  );
+
+  const updatedPO: PurchaseOrder = {
+    ...po,
+    items: updatedPOItems,
+    status: allFullyReceived ? 'received' : 'partially_received',
+    processedReceiptIds: receiptId
+      ? [...po.processedReceiptIds, receiptId]
+      : po.processedReceiptIds,
+    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    success: true,
+    updatedPO,
+    updatedInventory: currentInventory,
+    movements,
+  };
+}
+
+export interface CreateInventoryProductInput {
+  id?: string;
+  name: string;
+  sku: string;
+  barcode?: string;
+  variantLabel?: string;
+  category: InventoryCategory;
+  unitOfMeasure?: UnitOfMeasure;
+  unitCost?: number;
+  price: number;
+  initialStock: number;
+  reorderThreshold: number;
+  image?: string;
+}
+
+export function validateNewInventoryProduct(
+  input: CreateInventoryProductInput,
+  existingInventory: InventoryItem[] = []
+): {
+  valid: boolean;
+  errors: Partial<Record<keyof CreateInventoryProductInput, string>>;
+} {
+  const errors: Partial<Record<keyof CreateInventoryProductInput, string>> = {};
+
+  if (!input.name || input.name.trim().length < 2) {
+    errors.name = 'Product name must be at least 2 characters long';
+  }
+
+  const trimmedSku = (input.sku || '').trim().toUpperCase();
+  if (!trimmedSku || trimmedSku.length < 3) {
+    errors.sku = 'Product SKU must be at least 3 characters (e.g., KH-BP-250J)';
+  } else {
+    const duplicateSku = existingInventory.some(
+      (item) => item.sku.trim().toUpperCase() === trimmedSku
+    );
+    if (duplicateSku) {
+      errors.sku = `A product with SKU "${trimmedSku}" already exists in inventory`;
+    }
+  }
+
+  const trimmedBarcode = (input.barcode || '').trim();
+  if (trimmedBarcode) {
+    if (!/^\d{8,14}$/.test(trimmedBarcode)) {
+      errors.barcode = 'Barcode must be 8 to 14 digits';
+    } else {
+      const duplicateBarcode = existingInventory.some(
+        (item) => item.barcode.trim() === trimmedBarcode
+      );
+      if (duplicateBarcode) {
+        errors.barcode = `A product with barcode "${trimmedBarcode}" already exists`;
+      }
+    }
+  }
+
+  const validCategories: InventoryCategory[] = [
+    'Single Pouches (100g)',
+    'Glass Jars (250g)',
+    'Value Bundles',
+  ];
+  if (!input.category || !validCategories.includes(input.category)) {
+    errors.category = 'Please select a valid product category';
+  }
+
+  const numericPrice = Number(input.price);
+  if (!Number.isFinite(numericPrice) || numericPrice <= 0) {
+    errors.price = 'Selling price must be greater than $0.00';
+  }
+
+  if (input.unitCost !== undefined) {
+    const numericCost = Number(input.unitCost);
+    if (!Number.isFinite(numericCost) || numericCost < 0) {
+      errors.unitCost = 'Unit cost cannot be negative';
+    }
+  }
+
+  const numericStock = Number(input.initialStock);
+  if (
+    !Number.isFinite(numericStock) ||
+    numericStock < 0 ||
+    !Number.isInteger(numericStock)
+  ) {
+    errors.initialStock = 'Initial stock quantity must be a whole number (0 or greater)';
+  }
+
+  const numericThreshold = Number(input.reorderThreshold);
+  if (
+    !Number.isFinite(numericThreshold) ||
+    numericThreshold < 0 ||
+    !Number.isInteger(numericThreshold)
+  ) {
+    errors.reorderThreshold = 'Reorder threshold must be a whole number (0 or greater)';
+  }
+
+  return {
+    valid: Object.keys(errors).length === 0,
+    errors,
+  };
+}
+
+export function createInventoryProduct(
+  inventory: InventoryItem[],
+  input: CreateInventoryProductInput,
+  options?: {
+    performedBy?: string;
+    actorAccount?: UserAccount | null;
+  }
+): {
+  success: boolean;
+  newItem?: InventoryItem;
+  updatedInventory: InventoryItem[];
+  movement?: StockMovementRecord;
+  error?: string;
+  fieldErrors?: Partial<Record<keyof CreateInventoryProductInput, string>>;
+} {
+  if (options?.actorAccount !== undefined && !isAdminAccount(options.actorAccount)) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      error: 'Unauthorized: Only an active admin account can add new products',
+    };
+  }
+
+  const validation = validateNewInventoryProduct(input, inventory);
+  if (!validation.valid) {
+    const firstError =
+      Object.values(validation.errors)[0] ||
+      'Please fix the highlighted product fields';
+    return {
+      success: false,
+      updatedInventory: inventory,
+      error: firstError,
+      fieldErrors: validation.errors,
+    };
+  }
+
+  const normalizedSku = input.sku.trim().toUpperCase();
+  const baseSlug = (input.id || input.name)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+
+  const resolvedId =
+    inventory.some((item) => item.id === baseSlug) || !baseSlug
+      ? `${baseSlug || 'product'}-${normalizedSku.toLowerCase()}`
+      : baseSlug;
+
+  const resolvedBarcode =
+    input.barcode && input.barcode.trim().length > 0
+      ? input.barcode.trim()
+      : `8847102${String(100000 + inventory.length * 17 + 1).slice(-6)}`;
+
+  const resolvedUom: UnitOfMeasure =
+    input.unitOfMeasure ||
+    (input.category === 'Single Pouches (100g)'
+      ? '100g Pouch'
+      : input.category === 'Glass Jars (250g)'
+      ? '250g Glass Jar'
+      : 'Bundle Box');
+
+  const resolvedPrice = Number(Number(input.price).toFixed(2));
+  const resolvedCost =
+    input.unitCost !== undefined && Number.isFinite(Number(input.unitCost))
+      ? Number(Number(input.unitCost).toFixed(2))
+      : Number((resolvedPrice * 0.45).toFixed(2));
+
+  const resolvedDefaultImage =
+    input.image && input.image.trim().length > 0
+      ? input.image.trim()
+      : input.category === 'Single Pouches (100g)'
+      ? '/assets/aistudio/product-honey-butter-pouch-100g.png'
+      : input.category === 'Glass Jars (250g)'
+      ? '/assets/aistudio/product-honey-butter-jar-250g.png'
+      : '/assets/aistudio/bundle-complete-4pack.png';
+
+  const initialStock = Math.max(0, Math.floor(Number(input.initialStock)));
+  const reorderThreshold = Math.max(0, Math.floor(Number(input.reorderThreshold)));
+  const timestamp = new Date().toISOString();
+
+  const newItem: InventoryItem = {
+    id: resolvedId,
+    sku: normalizedSku,
+    barcode: resolvedBarcode,
+    name: input.name.trim(),
+    variantLabel:
+      input.variantLabel && input.variantLabel.trim().length > 0
+        ? input.variantLabel.trim()
+        : `${resolvedUom} · ${normalizedSku}`,
+    category: input.category,
+    unitOfMeasure: resolvedUom,
+    unitCost: resolvedCost,
+    price: resolvedPrice,
+    stockQuantity: initialStock,
+    reservedQuantity: 0,
+    damagedQuantity: 0,
+    reorderThreshold,
+    status: computeInventoryStatus(initialStock, reorderThreshold),
+    image: resolvedDefaultImage,
+    lastUpdated: timestamp,
+  };
+
+  let movement: StockMovementRecord | undefined;
+  if (initialStock > 0) {
+    movement = {
+      movementId: `MOV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      itemId: newItem.id,
+      sku: newItem.sku,
+      productName: newItem.name,
+      type: 'restock',
+      quantityDelta: initialStock,
+      previousStock: 0,
+      resultingStock: initialStock,
+      unitCost: resolvedCost,
+      unitPrice: resolvedPrice,
+      reason: 'Initial stock on new product creation',
+      referenceId: `NEW-${newItem.sku}`,
+      performedBy:
+        options?.performedBy ||
+        options?.actorAccount?.email ||
+        'Kampot Harvest Admin',
+      timestamp,
+    };
+  }
+
+  return {
+    success: true,
+    newItem,
+    updatedInventory: [...inventory, newItem],
+    movement,
+  };
+}
 

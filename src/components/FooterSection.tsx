@@ -2,7 +2,7 @@ import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
-import { AccountRole } from '../utils/storeLogic';
+import { AccountRole, InventoryItem, isProductOutOfStock } from '../utils/storeLogic';
 
 interface FooterSectionProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
@@ -11,6 +11,7 @@ interface FooterSectionProps {
   onOpenAccountModal?: (role?: AccountRole) => void;
   onSelectProduct?: (product: Product) => void;
   onAddProductToCart?: (product: Product) => void;
+  inventory?: InventoryItem[];
 }
 
 export const FooterSection: React.FC<FooterSectionProps> = ({
@@ -20,6 +21,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
   onOpenAccountModal,
   onSelectProduct,
   onAddProductToCart,
+  inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   return (
@@ -48,10 +50,12 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
               const localizedFlavor = isHoneyButter ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime');
               const localizedSize = isJar ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch');
               const localizedDesc = isJar ? t('footer_jar_desc', 'Airtight Glass Jar') : t('footer_pouch_desc', 'Resealable Fresh Pouch');
+              const isOutOfStock = isProductOutOfStock(inventory, prod.id);
 
               return (
                 <div
                   key={prod.id}
+                  data-testid={`footer-product-card-${prod.id}`}
                   onClick={() => {
                     if (onSelectProduct) {
                       onSelectProduct(prod);
@@ -77,13 +81,23 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   </div>
 
                   {/* Product Image with plenty of breathing room */}
-                  <div className="w-full aspect-square flex items-center justify-center p-5 bg-[#F2EFE6] group-hover:bg-[#EBE7D8] rounded-2xl transition-colors duration-300 overflow-hidden mb-5">
+                  <div className="relative w-full aspect-square flex items-center justify-center p-5 bg-[#F2EFE6] group-hover:bg-[#EBE7D8] rounded-2xl transition-colors duration-300 overflow-hidden mb-5">
                     <SmartImage
                       src={prod.image}
                       alt={`${prod.name} - ${prod.flavor}`}
-                      className="max-h-[88%] max-w-[88%] object-contain drop-shadow-md group-hover:scale-108 transition-transform duration-300"
+                      className={`max-h-[88%] max-w-[88%] object-contain drop-shadow-md group-hover:scale-108 transition-transform duration-300 ${
+                        isOutOfStock ? 'opacity-80' : ''
+                      }`}
                       fallbackBg="transparent"
                     />
+                    {isOutOfStock && (
+                      <span
+                        data-testid={`footer-bottom-out-of-stock-${prod.id}`}
+                        className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
+                      >
+                        Out of Stock
+                      </span>
+                    )}
                   </div>
 
                   {/* Info & Price */}
@@ -95,6 +109,14 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                       <p className="text-xs sm:text-sm text-[#384A22]/70 mt-1">
                         {localizedFlavor} · {localizedDesc}
                       </p>
+                      {isOutOfStock && (
+                        <p
+                          data-testid={`footer-out-of-stock-statement-${prod.id}`}
+                          className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mt-1.5"
+                        >
+                          Product is Out of Stock
+                        </p>
+                      )}
                     </div>
 
                     <div className="mt-4 pt-3 border-t border-[#384A22]/10 flex items-center justify-center gap-2">
@@ -108,8 +130,11 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   <div className="mt-5">
                     <button
                       type="button"
+                      disabled={isOutOfStock}
+                      data-testid={`footer-action-btn-${prod.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (isOutOfStock) return;
                         if (onAddProductToCart) {
                           onAddProductToCart(prod);
                         } else if (onSelectProduct) {
@@ -118,11 +143,21 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                           onNavigate('shop', 'powders');
                         }
                       }}
-                      className="w-full py-3 rounded-full bg-[#384A22] text-[#F2F0E3] font-medium text-sm group-hover:bg-[#8B6D3B] transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                      className={`w-full py-3 rounded-full font-medium text-sm transition-colors flex items-center justify-center gap-2 shadow-sm ${
+                        isOutOfStock
+                          ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                          : 'bg-[#384A22] text-[#F2F0E3] group-hover:bg-[#8B6D3B] cursor-pointer'
+                      }`}
                     >
-                      <span>{t('btn_add_to_cart')}</span>
-                      <span className="text-sm">·</span>
-                      <span>{formatPrice(prod.price)}</span>
+                      {isOutOfStock ? (
+                        <span>Out of Stock</span>
+                      ) : (
+                        <>
+                          <span>{t('btn_add_to_cart')}</span>
+                          <span className="text-sm">·</span>
+                          <span>{formatPrice(prod.price)}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

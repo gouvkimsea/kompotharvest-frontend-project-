@@ -3,12 +3,14 @@ import { ASSETS, BUNDLES, BundleItem, HERO_FEATURES, HERO_STATS } from '../data/
 import { SmartImage } from './SmartImage';
 import { ActivePage } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
+import { InventoryItem, isProductOutOfStock } from '../utils/storeLogic';
 
 interface HeroAndBundleProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
   onAddBundleToCart: (bundle: BundleItem) => void;
   onSelectBundleDetail: (bundle: BundleItem) => void;
   onClaimOffer: () => void;
+  inventory?: InventoryItem[];
 }
 
 const FeatureIcon: React.FC<{ type: 'peanut' | 'cold' | 'nosugar' | 'natural' | 'protein' }> = ({
@@ -63,6 +65,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
   onAddBundleToCart,
   onSelectBundleDetail,
   onClaimOffer,
+  inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   const [selectedFeatureId, setSelectedFeatureId] = useState<string | null>(null);
@@ -115,41 +118,58 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
           <div className="relative w-full grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-6 items-end justify-items-center px-2 sm:px-8 pt-2 pb-4">
             {[
               {
+                id: 'honey-butter-100g-pouch',
                 src: '/assets/aistudio/product-honey-butter-pouch-100g.png',
                 alt: 'Artisan Roasted Cashews — Honey Butter (100g Pouch)',
                 label: 'Honey Butter · 100g Pouch',
               },
               {
+                id: 'chili-lime-100g-pouch',
                 src: '/assets/aistudio/product-chili-lime-pouch-100g.png',
                 alt: 'Artisan Roasted Cashews — Chili Lime (100g Pouch)',
                 label: 'Chili Lime · 100g Pouch',
               },
               {
+                id: 'honey-butter-250g-jar',
                 src: '/assets/aistudio/product-honey-butter-jar-250g.png',
                 alt: 'Artisan Roasted Cashews — Honey Butter (250g Jar)',
                 label: 'Honey Butter · 250g Jar',
               },
               {
+                id: 'chilli-lime-250g-jar',
                 src: '/assets/aistudio/product-chilli-lime-jar-250g.png',
                 alt: 'Artisan Roasted Cashews — Chili Lime (250g Jar)',
                 label: 'Chili Lime · 250g Jar',
               },
-            ].map((item, idx) => (
-              <div
-                key={idx}
-                onClick={() => onNavigate('shop', 'powders')}
-                className="group flex flex-col items-center cursor-pointer transition-transform duration-300 hover:-translate-y-2"
-              >
-                <div className="w-[155px] sm:w-[205px] lg:w-[230px] h-[200px] sm:h-[265px] lg:h-[295px] flex items-end justify-center">
-                  <SmartImage
-                    src={item.src}
-                    alt={item.alt}
-                    className="w-full h-full object-contain drop-shadow-[0_18px_24px_rgba(45,68,28,0.28)]"
-                    fallbackBg="transparent"
-                  />
+            ].map((item, idx) => {
+              const outOfStock = isProductOutOfStock(inventory, item.id);
+              return (
+                <div
+                  key={idx}
+                  onClick={() => onNavigate('shop', 'powders')}
+                  className="group relative flex flex-col items-center cursor-pointer transition-transform duration-300 hover:-translate-y-2"
+                >
+                  <div className="relative w-[155px] sm:w-[205px] lg:w-[230px] h-[200px] sm:h-[265px] lg:h-[295px] flex items-end justify-center">
+                    <SmartImage
+                      src={item.src}
+                      alt={item.alt}
+                      className={`w-full h-full object-contain drop-shadow-[0_18px_24px_rgba(45,68,28,0.28)] ${
+                        outOfStock ? 'opacity-80' : ''
+                      }`}
+                      fallbackBg="transparent"
+                    />
+                    {outOfStock && (
+                      <span
+                        data-testid={`hero-out-of-stock-label-${item.id}`}
+                        className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
+                      >
+                        Out of Stock
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {/* Warm Teak Countertop Ledge beneath the 4 products */}
           <div className="w-[94%] max-w-[980px] h-3.5 rounded-full bg-gradient-to-r from-[#8B6D3B]/35 via-[#8B6D3B]/70 to-[#8B6D3B]/35 shadow-md -mt-2" />
@@ -310,9 +330,11 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-12 items-end">
             {bundleOrder.map((bundleIndex) => {
               const bundle = BUNDLES[bundleIndex];
+              const isOutOfStock = isProductOutOfStock(inventory, bundle.id);
               return (
                 <div
                   key={bundle.id}
+                  data-testid={`bundle-card-${bundle.id}`}
                   className="flex flex-col items-center group"
                 >
                   {/* Floating Bundle Product Photo */}
@@ -323,7 +345,9 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                     <SmartImage
                       src={bundle.image}
                       alt={bundle.name}
-                      className="w-full h-full object-contain drop-shadow-xl"
+                      className={`w-full h-full object-contain drop-shadow-xl ${
+                        isOutOfStock ? 'opacity-75' : ''
+                      }`}
                       fallbackBg="transparent"
                     />
                   </div>
@@ -333,6 +357,15 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                     <h3 className="text-[19px] font-semibold text-[#F3F1E4] tracking-tight">
                       {bundle.name}
                     </h3>
+
+                    {isOutOfStock && (
+                      <p
+                        data-testid={`bundle-out-of-stock-text-${bundle.id}`}
+                        className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
+                      >
+                        Product is Out of Stock
+                      </p>
+                    )}
 
                     <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
                       <span className="text-[24px] font-medium text-[#F2F0E3]">
@@ -352,10 +385,18 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                     <div className="mt-4 flex items-center justify-center gap-3">
                       <button
                         type="button"
-                        onClick={() => onAddBundleToCart(bundle)}
-                        className="flex-1 py-2.5 px-5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[14px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                        disabled={isOutOfStock}
+                        data-testid={`bundle-action-btn-${bundle.id}`}
+                        onClick={() => {
+                          if (!isOutOfStock) onAddBundleToCart(bundle);
+                        }}
+                        className={`flex-1 py-2.5 px-5 rounded-full text-[14px] font-medium transition-colors whitespace-nowrap ${
+                          isOutOfStock
+                            ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                            : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                        }`}
                       >
-                        {t('btn_add_to_cart')}
+                        {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"

@@ -20,6 +20,23 @@ import {
   calculateInventoryStats,
   applyInventoryOrderDeduction,
   adjustInventoryStock,
+  LOW_STOCK_RED_THRESHOLD,
+  isLowStockRedHighlight,
+  resolveInventoryItemId,
+  getProductStockQuantity,
+  isProductOutOfStock,
+  getProductAvailabilityLabel,
+  promoteAccountToAdmin,
+  deactivateUserAccount,
+  validateAndProcessSale,
+  reverseStockMovement,
+  createInitialPurchaseOrders,
+  createPurchaseOrder,
+  approvePurchaseOrder,
+  cancelPurchaseOrder,
+  receivePurchaseOrderDelivery,
+  validateNewInventoryProduct,
+  createInventoryProduct,
 } from './storeLogic';
 import { PRODUCTS } from '../data/botenzData';
 
@@ -287,9 +304,13 @@ test('Inventory calculations, order deductions, and stock adjustments reflect bu
   const stats = calculateInventoryStats(initial);
 
   assert.equal(stats.totalProducts, 7);
-  assert.equal(stats.totalStockUnits, 84 + 14 + 62 + 9 + 28 + 0 + 45);
-  assert.equal(stats.lowStockCount, 2); // chili-lime-100g-pouch (14<=20), chilli-lime-250g-jar (9<=15)
-  assert.equal(stats.outOfStockCount, 1); // bundle-nut-lovers (0)
+  assert.equal(stats.totalStockUnits, 84 + 0 + 62 + 9 + 28 + 0 + 45);
+  assert.equal(stats.lowStockCount, 1); // chilli-lime-250g-jar (9<=15)
+  assert.equal(stats.outOfStockCount, 2); // chili-lime-100g-pouch (0), bundle-nut-lovers (0)
+  assert.equal(stats.unitsByMeasure.pouches, 84);
+  assert.equal(stats.unitsByMeasure.jars, 62 + 9);
+  assert.equal(stats.unitsByMeasure.bundles, 28 + 45);
+  assert.equal(stats.replenishmentNeeded.length, 3); // KH-CL-100P, KH-CL-250J, KH-BND-250D
 
   // Deduct stock on completed purchase
   const afterOrder = applyInventoryOrderDeduction(
@@ -336,6 +357,388 @@ test('Inventory calculations, order deductions, and stock adjustments reflect bu
   assert.ok(invalidNegative.error?.includes('Cannot reduce stock below 0'));
 });
 
+test('isLowStockRedHighlight identifies products with stockQuantity < 10', () => {
+  assert.equal(LOW_STOCK_RED_THRESHOLD, 10);
+  assert.equal(isLowStockRedHighlight(0), true);
+  assert.equal(isLowStockRedHighlight(9), true);
+  assert.equal(isLowStockRedHighlight(10), false);
+  assert.equal(isLowStockRedHighlight(14), false);
 
+  const initial = createInitialInventory();
+  const redHighlightedSkus = initial
+    .filter((item) => isLowStockRedHighlight(item.stockQuantity))
+    .map((item) => item.sku);
+  assert.deepEqual(redHighlightedSkus, ['KH-CL-100P', 'KH-CL-250J', 'KH-BND-250D']);
+});
 
+test('isProductOutOfStock and getProductAvailabilityLabel accurately detect out-of-stock products and variants', () => {
+  const initial = createInitialInventory();
 
+  assert.equal(resolveInventoryItemId('cl-pouch-100'), 'chili-lime-100g-pouch');
+  assert.equal(resolveInventoryItemId('cl-jar-250'), 'chilli-lime-250g-jar');
+
+  assert.equal(getProductStockQuantity('chili-lime-100g-pouch', initial), 0);
+  assert.equal(isProductOutOfStock('chili-lime-100g-pouch', initial), true);
+  assert.equal(isProductOutOfStock('cl-pouch-100', initial), true);
+  assert.equal(getProductAvailabilityLabel('chili-lime-100g-pouch', initial), 'Out of Stock');
+
+  assert.equal(getProductStockQuantity('bundle-nut-lovers', initial), 0);
+  assert.equal(isProductOutOfStock('bundle-nut-lovers', initial), true);
+  assert.equal(getProductAvailabilityLabel('bundle-nut-lovers', initial), 'Out of Stock');
+
+  assert.equal(getProductStockQuantity('honey-butter-100g-pouch', initial), 84);
+  assert.equal(isProductOutOfStock('honey-butter-100g-pouch', initial), false);
+  assert.equal(getProductAvailabilityLabel('honey-butter-100g-pouch', initial), 'In Stock');
+
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', initial), 9);
+  assert.equal(isProductOutOfStock('chilli-lime-250g-jar', initial), false);
+  assert.equal(getProductAvailabilityLabel('chilli-lime-250g-jar', initial), 'Only 9 left in stock');
+});
+
+test('Comprehensive Business Scenarios: PO Receiving (50 units & partial), Sales (10 units & oversell protection), Returns, Idempotency & Reversals', () => {
+  const adminAccount = {
+    accountId: 'KH-ADM-0001',
+    fullName: 'Kampot Harvest Admin',
+    email: 'admin@kampotharvest.com',
+    role: 'admin' as const,
+    status: 'active' as const,
+    verified: true,
+    permissions: getRolePermissions('admin', 'active'),
+    discountCode: 'HARVEST15',
+    createdAt: '2026-10-01T08:00:00.000Z',
+  };
+
+  const normalUser = createUserAccount({
+    fullName: 'Normal Customer',
+    email: 'customer@example.com',
+    password: 'Password123',
+    confirmPassword: 'Password123',
+  }).account!;
+
+  // 1. Unauthorized user cannot promote accounts or create POs
+  assert.equal(promoteAccountToAdmin(normalUser, normalUser).success, false);
+  const promoted = promoteAccountToAdmin(normalUser, adminAccount);
+  assert.equal(promoted.success, true);
+  assert.equal(isAdminAccount(promoted.account), true);
+
+  const deactivated = deactivateUserAccount(promoted.account!, adminAccount);
+  assert.equal(deactivated.success, true);
+  assert.equal(deactivated.account?.status, 'suspended');
+  assert.equal(isAdminAccount(deactivated.account), false);
+
+  // 2. Purchasing & Supplier Receiving Workflow (50 units + partial delivery + cancelled PO guard)
+  let inv = createInitialInventory();
+  const initialPos = createInitialPurchaseOrders();
+  const po401 = initialPos[0]; // Approved PO with 50x KH-CL-100P (currently 0) and 30x KH-BND-250D (currently 0)
+
+  // Normal user cannot receive delivery
+  assert.equal(
+    receivePurchaseOrderDelivery(
+      po401,
+      inv,
+      [{ itemId: 'chili-lime-100g-pouch', acceptedQty: 50 }],
+      normalUser
+    ).success,
+    false
+  );
+
+  // Admin receives 50 units of chili-lime-100g-pouch and partial 15 units of bundle-nut-lovers
+  const partialReceipt = receivePurchaseOrderDelivery(
+    po401,
+    inv,
+    [
+      { itemId: 'chili-lime-100g-pouch', acceptedQty: 50 },
+      { itemId: 'bundle-nut-lovers', acceptedQty: 15 },
+    ],
+    adminAccount,
+    'RCPT-001'
+  );
+  assert.equal(partialReceipt.success, true);
+  assert.equal(partialReceipt.updatedPO?.status, 'partially_received');
+  inv = partialReceipt.updatedInventory;
+  assert.equal(getProductStockQuantity('chili-lime-100g-pouch', inv), 50);
+  assert.equal(getProductStockQuantity('bundle-nut-lovers', inv), 15);
+
+  // Duplicate receipt with same receiptId is rejected
+  const dupReceipt = receivePurchaseOrderDelivery(
+    partialReceipt.updatedPO!,
+    inv,
+    [{ itemId: 'bundle-nut-lovers', acceptedQty: 15 }],
+    adminAccount,
+    'RCPT-001'
+  );
+  assert.equal(dupReceipt.success, false);
+  assert.ok(dupReceipt.error?.includes('Duplicate delivery receipt'));
+
+  // Receive remaining 15 units of bundle-nut-lovers -> status transitions to 'received'
+  const finalReceipt = receivePurchaseOrderDelivery(
+    partialReceipt.updatedPO!,
+    inv,
+    [{ itemId: 'bundle-nut-lovers', acceptedQty: 15 }],
+    adminAccount,
+    'RCPT-002'
+  );
+  assert.equal(finalReceipt.success, true);
+  assert.equal(finalReceipt.updatedPO?.status, 'received');
+  inv = finalReceipt.updatedInventory;
+  assert.equal(getProductStockQuantity('bundle-nut-lovers', inv), 30);
+
+  // Cancelled PO cannot be approved or received
+  const newPoRes = createPurchaseOrder(
+    inv,
+    {
+      supplierName: 'Mekong Glassworks',
+      items: [{ itemId: 'honey-butter-250g-jar', orderedQty: 20, unitCost: 8.5 }],
+    },
+    adminAccount,
+    initialPos
+  );
+  assert.equal(newPoRes.success, true);
+  const cancelledPo = cancelPurchaseOrder(newPoRes.purchaseOrder!, adminAccount);
+  assert.equal(cancelledPo.success, true);
+  assert.equal(cancelledPo.purchaseOrder?.status, 'cancelled');
+  assert.equal(
+    receivePurchaseOrderDelivery(
+      cancelledPo.purchaseOrder!,
+      inv,
+      [{ itemId: 'honey-butter-250g-jar', acceptedQty: 20 }],
+      adminAccount
+    ).success,
+    false
+  );
+
+  // 3. Selling 10 units and verifying stock decrease + idempotency
+  const sale10 = validateAndProcessSale(
+    inv,
+    [
+      {
+        id: 'chili-lime-100g-pouch',
+        name: 'Artisan Roasted Cashews',
+        variantLabel: '100g Pouch',
+        price: 10,
+        originalPrice: 10,
+        quantity: 10,
+        image: '',
+      },
+    ],
+    'KH-2026-5001',
+    { idempotencyKey: 'CHK-KEY-1001', existingMovements: [] }
+  );
+  assert.equal(sale10.success, true);
+  inv = sale10.updatedInventory;
+  assert.equal(getProductStockQuantity('chili-lime-100g-pouch', inv), 40);
+
+  // Duplicate sale submission with same idempotencyKey is rejected
+  const dupSale = validateAndProcessSale(
+    inv,
+    [
+      {
+        id: 'chili-lime-100g-pouch',
+        name: 'Artisan Roasted Cashews',
+        variantLabel: '100g Pouch',
+        price: 10,
+        originalPrice: 10,
+        quantity: 10,
+        image: '',
+      },
+    ],
+    'KH-2026-5001',
+    { idempotencyKey: 'CHK-KEY-1001', existingMovements: sale10.movements }
+  );
+  assert.equal(dupSale.success, false);
+  assert.equal(dupSale.duplicate, true);
+  assert.equal(getProductStockQuantity('chili-lime-100g-pouch', inv), 40);
+
+  // 4. Rejecting a sale that exceeds available stock & handling simultaneous sales without overselling
+  // chilli-lime-250g-jar has 9 units in stock
+  const oversellAttempt = validateAndProcessSale(
+    inv,
+    [
+      {
+        id: 'chilli-lime-250g-jar',
+        name: 'Artisan Roasted Cashews',
+        variantLabel: '250g Jar',
+        price: 20,
+        originalPrice: 20,
+        quantity: 12,
+        image: '',
+      },
+    ],
+    'KH-2026-5002'
+  );
+  assert.equal(oversellAttempt.success, false);
+  assert.ok(oversellAttempt.error?.includes('Insufficient stock'));
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', inv), 9);
+
+  // Simultaneous sales: Buyer A buys 6 of 9, Buyer B tries to buy 5 of remaining 3 -> Buyer B is rejected
+  const buyerA = validateAndProcessSale(
+    inv,
+    [
+      {
+        id: 'chilli-lime-250g-jar',
+        name: 'Artisan Roasted Cashews',
+        variantLabel: '250g Jar',
+        price: 20,
+        originalPrice: 20,
+        quantity: 6,
+        image: '',
+      },
+    ],
+    'KH-2026-5003'
+  );
+  assert.equal(buyerA.success, true);
+  inv = buyerA.updatedInventory;
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', inv), 3);
+
+  const buyerB = validateAndProcessSale(
+    inv,
+    [
+      {
+        id: 'chilli-lime-250g-jar',
+        name: 'Artisan Roasted Cashews',
+        variantLabel: '250g Jar',
+        price: 20,
+        originalPrice: 20,
+        quantity: 5,
+        image: '',
+      },
+    ],
+    'KH-2026-5004'
+  );
+  assert.equal(buyerB.success, false);
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', inv), 3);
+
+  // 5. Processing eligible customer returns & preventing duplicate restocking
+  const return1 = adjustInventoryStock(
+    inv,
+    'chilli-lime-250g-jar',
+    2,
+    'return',
+    'Customer return Order KH-2026-5003',
+    {
+      performedBy: adminAccount.fullName,
+      referenceId: 'RET-KH-2026-5003',
+      existingMovements: [],
+    }
+  );
+  assert.equal(return1.success, true);
+  inv = return1.updatedInventory;
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', inv), 5);
+
+  const duplicateReturn = adjustInventoryStock(
+    inv,
+    'chilli-lime-250g-jar',
+    2,
+    'return',
+    'Duplicate customer return submission',
+    {
+      performedBy: adminAccount.fullName,
+      referenceId: 'RET-KH-2026-5003',
+      existingMovements: [return1.movement!],
+    }
+  );
+  assert.equal(duplicateReturn.success, false);
+  assert.ok(duplicateReturn.error?.includes('already been restocked'));
+  assert.equal(getProductStockQuantity('chilli-lime-250g-jar', inv), 5);
+
+  // 6. Compensating reversal (e.g. cancelling sale10 restores the 10 units without deleting history)
+  const reversal = reverseStockMovement(
+    inv,
+    sale10.movements,
+    sale10.movements[0].movementId,
+    adminAccount.fullName,
+    'Order KH-2026-5001 cancelled before dispatch'
+  );
+  assert.equal(reversal.success, true);
+  inv = reversal.updatedInventory;
+  assert.equal(getProductStockQuantity('chili-lime-100g-pouch', inv), 50);
+  assert.equal(reversal.updatedMovements.length, 2);
+
+  // Cannot reverse the same movement twice
+  const doubleReversal = reverseStockMovement(
+    inv,
+    reversal.updatedMovements,
+    sale10.movements[0].movementId,
+    adminAccount.fullName
+  );
+  assert.equal(doubleReversal.success, false);
+});
+
+test('createInventoryProduct allows admins to add new products, prevents duplicate SKUs, and records initial stock movements', () => {
+  const initialInv = createInitialInventory();
+  const adminAccount = {
+    accountId: 'KH-ADM-0001',
+    fullName: 'Kampot Harvest Admin',
+    email: 'admin@kampotharvest.com',
+    role: 'admin' as const,
+    status: 'active' as const,
+    verified: true,
+    permissions: getRolePermissions('admin', 'active'),
+    discountCode: 'HARVEST15',
+    createdAt: '2026-10-01T00:00:00.000Z',
+  };
+  const normalUser = {
+    accountId: 'KH-USR-1001',
+    fullName: 'Sokha Chan',
+    email: 'sokha.chan@example.com',
+    role: 'user' as const,
+    status: 'active' as const,
+    verified: true,
+    permissions: getRolePermissions('user', 'active'),
+    discountCode: 'HARVEST15',
+    createdAt: '2026-10-01T00:00:00.000Z',
+  };
+
+  // Unauthorized non-admin cannot add product
+  const unauthCreate = createInventoryProduct(
+    initialInv,
+    {
+      name: 'Artisan Roasted Cashews — Kampot Black Pepper (250g Jar)',
+      sku: 'KH-BP-250J',
+      category: 'Glass Jars (250g)',
+      price: 22,
+      unitCost: 9.5,
+      initialStock: 35,
+      reorderThreshold: 12,
+    },
+    { actorAccount: normalUser }
+  );
+  assert.equal(unauthCreate.success, false);
+
+  // Duplicate SKU is rejected
+  const dupSku = validateNewInventoryProduct(
+    {
+      name: 'Duplicate Honey Butter Pouch',
+      sku: 'kh-hb-100p',
+      category: 'Single Pouches (100g)',
+      price: 10,
+      initialStock: 10,
+      reorderThreshold: 5,
+    },
+    initialInv
+  );
+  assert.equal(dupSku.valid, false);
+  assert.ok(dupSku.errors.sku?.includes('already exists'));
+
+  // Valid admin product creation
+  const created = createInventoryProduct(
+    initialInv,
+    {
+      name: 'Artisan Roasted Cashews — Kampot Black Pepper (250g Jar)',
+      sku: 'kh-bp-250j',
+      variantLabel: 'Kampot Black Pepper · 250g Glass Jar',
+      category: 'Glass Jars (250g)',
+      price: 22,
+      unitCost: 9.5,
+      initialStock: 35,
+      reorderThreshold: 12,
+    },
+    { actorAccount: adminAccount }
+  );
+  assert.equal(created.success, true);
+  assert.equal(created.updatedInventory.length, initialInv.length + 1);
+  assert.equal(created.newItem?.sku, 'KH-BP-250J');
+  assert.equal(created.newItem?.status, 'in_stock');
+  assert.equal(created.movement?.quantityDelta, 35);
+  assert.equal(created.movement?.type, 'restock');
+});

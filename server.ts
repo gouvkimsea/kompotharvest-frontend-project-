@@ -22,8 +22,17 @@ import {
   StockMovementRecord,
   createInitialInventory,
   calculateInventoryStats,
-  applyInventoryOrderDeduction,
   adjustInventoryStock,
+  validateAndProcessSale,
+  reverseStockMovement,
+  PurchaseOrder,
+  createInitialPurchaseOrders,
+  createPurchaseOrder,
+  approvePurchaseOrder,
+  receivePurchaseOrderDelivery,
+  cancelPurchaseOrder,
+  createInventoryProduct,
+  CreateInventoryProductInput,
 } from './src/utils/storeLogic.ts';
 
 dotenv.config();
@@ -51,7 +60,7 @@ interface OrderRecord {
     postalCode?: string;
   };
   summary: any;
-  status: 'confirmed' | 'processing' | 'shipped';
+  status: 'confirmed' | 'processing' | 'shipped' | 'cancelled';
 }
 
 const orders: OrderRecord[] = [];
@@ -122,8 +131,9 @@ const storedAccounts: StoredUserRecord[] = [
 
 const activeSessions = new Map<string, string>(); // token -> accountId
 
-// Live Business Inventory & Stock Movements Store
+// Live Business Inventory, Purchase Orders & Stock Movements Store
 let inventoryItems: InventoryItem[] = createInitialInventory();
+let purchaseOrders: PurchaseOrder[] = createInitialPurchaseOrders();
 const stockMovements: StockMovementRecord[] = [
   {
     movementId: 'MOV-2026-1001',
@@ -134,6 +144,8 @@ const stockMovements: StockMovementRecord[] = [
     quantityDelta: 50,
     resultingStock: 62,
     reason: 'Kampot Solar Roastery Batch #KH-408',
+    referenceId: 'PO-2026-399',
+    performedBy: seedAdminEmail,
     timestamp: '2026-10-22T16:40:00.000Z',
   },
   {
@@ -145,6 +157,8 @@ const stockMovements: StockMovementRecord[] = [
     quantityDelta: -2,
     resultingStock: 84,
     reason: 'Completed Order KH-2026-1042',
+    referenceId: 'KH-2026-1042',
+    performedBy: 'sokha.chan@example.com',
     timestamp: '2026-10-22T09:15:00.000Z',
   },
 ];
@@ -161,6 +175,7 @@ function getAuthenticatedAccount(req: Request): UserAccount | null {
   }
   const record = storedAccounts.find((r) => r.account.accountId === accountId);
   if (!record || record.account.status === 'suspended') {
+    activeSessions.delete(token);
     return null;
   }
   return record.account;
@@ -186,6 +201,14 @@ app.get('/api/health', (req: Request, res: Response) => {
     uptimeSeconds: Math.floor(process.uptime()),
     geminiEnabled: Boolean(genAI),
     environment: process.env.NODE_ENV || 'development',
+  });
+});
+
+// Public Storefront Stock Availability Endpoint
+app.get('/api/storefront/stock', (req: Request, res: Response) => {
+  res.json({
+    success: true,
+    inventory: inventoryItems,
   });
 });
 
@@ -279,9 +302,9 @@ app.post('/api/cart/validate', (req: Request, res: Response) => {
   });
 });
 
-// Orders placement endpoint
+// Orders placement endpoint with atomic stock validation & oversell protection
 app.post('/api/orders', (req: Request, res: Response) => {
-  const { items, customer, promoCode } = req.body;
+  const { items, customer, promoCode, idempotencyKey } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'Order must contain at least one item' });
@@ -294,31 +317,92 @@ app.post('/api/orders', (req: Request, res: Response) => {
     typeof promoCode === 'string' &&
     ['KAMPOT10', 'WELCOME10', 'HARVEST15'].includes(promoCode.trim().toUpperCase());
 
-  const summary = calculateCartSummary(items, isPromoValid);
-
   const orderId = `KH-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+  // Validate stock availability and process atomic sale using trusted server-side pricing
+  const saleResult = validateAndProcessSale(inventoryItems, items, orderId, {
+    existingMovements: stockMovements,
+    performedBy: customer.email,
+    idempotencyKey,
+    promoCodeActive: isPromoValid,
+  });
+
+  if (!saleResult.success) {
+    return res.status(400).json({
+      success: false,
+      error: saleResult.error || 'Insufficient stock to complete order',
+    });
+  }
+
+  const trustedItems = saleResult.validatedItems || items;
+  const summary = saleResult.validatedSummary || calculateCartSummary(trustedItems, isPromoValid);
+
   const newOrder: OrderRecord = {
     orderId,
     createdAt: new Date().toISOString(),
-    items,
+    items: trustedItems,
     customer,
     summary,
     status: 'confirmed',
   };
 
   orders.unshift(newOrder);
-
-  // Automatically deduct ordered quantities from live inventory
-  const deduction = applyInventoryOrderDeduction(inventoryItems, items, orderId);
-  inventoryItems = deduction.updatedInventory;
-  if (deduction.movements.length > 0) {
-    stockMovements.unshift(...deduction.movements);
+  inventoryItems = saleResult.updatedInventory;
+  if (saleResult.movements.length > 0) {
+    stockMovements.unshift(...saleResult.movements);
   }
 
   res.status(201).json({
     success: true,
     message: 'Order placed successfully!',
     order: newOrder,
+    inventory: inventoryItems,
+  });
+});
+
+// Cancel unshipped order & restore reserved/deducted stock
+app.post('/api/orders/:orderId/cancel', (req: Request, res: Response) => {
+  const order = orders.find((o) => o.orderId === req.params.orderId);
+  if (!order) {
+    return res.status(404).json({ success: false, error: 'Order not found' });
+  }
+  if (order.status === 'cancelled') {
+    return res.status(400).json({ success: false, error: 'Order is already cancelled' });
+  }
+  if (order.status === 'shipped') {
+    return res.status(400).json({
+      success: false,
+      error: 'Shipped orders cannot be cancelled directly; process a customer return instead',
+    });
+  }
+
+  // Reverse stock movements linked to this orderId
+  const orderMovements = stockMovements.filter(
+    (m) => m.referenceId === order.orderId && m.type === 'sale' && !m.reversedByMovementId
+  );
+
+  for (const mov of orderMovements) {
+    const rev = reverseStockMovement(
+      inventoryItems,
+      stockMovements,
+      mov.movementId,
+      order.customer.email,
+      `Order ${order.orderId} cancelled before shipment`
+    );
+    if (rev.success && rev.reversalMovement) {
+      inventoryItems = rev.updatedInventory;
+      mov.reversedByMovementId = rev.reversalMovement.movementId;
+      stockMovements.unshift(rev.reversalMovement);
+    }
+  }
+
+  order.status = 'cancelled';
+
+  return res.json({
+    success: true,
+    message: `Order ${order.orderId} cancelled and stock restored.`,
+    order,
+    inventory: inventoryItems,
   });
 });
 
@@ -507,7 +591,7 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
   });
 });
 
-// ----------------- Protected Admin Inventory Endpoints -----------------
+// ----------------- Protected Admin Inventory & Purchasing Endpoints -----------------
 
 app.get('/api/admin/inventory', (req: Request, res: Response) => {
   const account = getAuthenticatedAccount(req);
@@ -529,7 +613,8 @@ app.get('/api/admin/inventory', (req: Request, res: Response) => {
     success: true,
     inventory: inventoryItems,
     stats,
-    movements: stockMovements.slice(0, 25),
+    movements: stockMovements.slice(0, 35),
+    purchaseOrders,
   });
 });
 
@@ -548,11 +633,13 @@ app.post('/api/admin/inventory/adjust', (req: Request, res: Response) => {
     });
   }
 
-  const { itemId, quantityDelta, type, reason } = req.body as {
+  const { itemId, quantityDelta, type, reason, referenceId, idempotencyKey } = req.body as {
     itemId?: string;
     quantityDelta?: number;
     type?: 'restock' | 'return' | 'adjustment';
     reason?: string;
+    referenceId?: string;
+    idempotencyKey?: string;
   };
 
   if (!itemId || quantityDelta === undefined) {
@@ -567,7 +654,13 @@ app.post('/api/admin/inventory/adjust', (req: Request, res: Response) => {
     itemId,
     Number(quantityDelta),
     type || 'adjustment',
-    reason || `Adjusted by ${account.fullName}`
+    reason || `Adjusted by ${account.fullName}`,
+    {
+      existingMovements: stockMovements,
+      performedBy: account.email,
+      referenceId,
+      idempotencyKey,
+    }
   );
 
   if (!result.success) {
@@ -588,7 +681,289 @@ app.post('/api/admin/inventory/adjust', (req: Request, res: Response) => {
     item: result.updatedItem,
     inventory: inventoryItems,
     stats: calculateInventoryStats(inventoryItems),
-    movements: stockMovements.slice(0, 25),
+    movements: stockMovements.slice(0, 35),
+    purchaseOrders,
+  });
+});
+
+app.post('/api/admin/inventory/reverse', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required.',
+    });
+  }
+  if (!isAdminAccount(account)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only authorized administrators can reverse inventory movements.',
+    });
+  }
+
+  const { movementId, reason } = req.body as { movementId?: string; reason?: string };
+  if (!movementId) {
+    return res.status(400).json({
+      success: false,
+      error: 'movementId is required',
+    });
+  }
+
+  const rev = reverseStockMovement(
+    inventoryItems,
+    stockMovements,
+    movementId,
+    account.email,
+    reason || `Compensating reversal by ${account.fullName}`
+  );
+
+  if (!rev.success) {
+    return res.status(400).json({
+      success: false,
+      error: rev.error || 'Failed to reverse stock movement',
+    });
+  }
+
+  inventoryItems = rev.updatedInventory;
+  stockMovements.splice(0, stockMovements.length, ...rev.updatedMovements);
+
+  return res.json({
+    success: true,
+    message: `Reversed movement ${movementId} via compensating entry ${rev.reversalMovement?.movementId}`,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+    movements: stockMovements.slice(0, 35),
+    purchaseOrders,
+  });
+});
+
+// Add a new product to inventory (Admin only)
+app.post('/api/admin/inventory/products', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required.',
+    });
+  }
+  if (!isAdminAccount(account)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only authorized administrators can add new products.',
+    });
+  }
+
+  const input = req.body as CreateInventoryProductInput;
+  const result = createInventoryProduct(inventoryItems, input, {
+    actorAccount: account,
+    performedBy: account.email,
+  });
+
+  if (!result.success || !result.newItem) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to add new product',
+      fieldErrors: result.fieldErrors,
+    });
+  }
+
+  inventoryItems = result.updatedInventory;
+  if (result.movement) {
+    stockMovements.unshift(result.movement);
+  }
+
+  return res.status(201).json({
+    success: true,
+    message: `Added "${result.newItem.name}" (SKU: ${result.newItem.sku}) with ${result.newItem.stockQuantity} initial units.`,
+    newItem: result.newItem,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+    movements: stockMovements.slice(0, 35),
+    purchaseOrders,
+  });
+});
+
+// Create Supplier Purchase Order
+app.post('/api/admin/purchase-orders', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account || !isAdminAccount(account)) {
+    return res.status(account ? 403 : 401).json({
+      success: false,
+      error: 'Only authorized administrators can create supplier purchase orders.',
+    });
+  }
+
+  const { supplierName, lines } = req.body as {
+    supplierName?: string;
+    lines?: Array<{ itemId: string; orderedQty: number; unitCost?: number }>;
+  };
+
+  const result = createPurchaseOrder(
+    inventoryItems,
+    {
+      supplierName: supplierName || 'Kampot Cashew Growers Cooperative',
+      items: lines || [],
+      status: 'draft',
+    },
+    account,
+    purchaseOrders
+  );
+
+  if (!result.success || !result.purchaseOrder) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to create purchase order',
+    });
+  }
+
+  purchaseOrders.unshift(result.purchaseOrder);
+
+  return res.status(201).json({
+    success: true,
+    message: `Draft Purchase Order ${result.purchaseOrder.poId} created (stock unchanged until received).`,
+    purchaseOrder: result.purchaseOrder,
+    purchaseOrders,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+  });
+});
+
+// Approve Supplier Purchase Order
+app.post('/api/admin/purchase-orders/:poId/approve', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account || !isAdminAccount(account)) {
+    return res.status(account ? 403 : 401).json({
+      success: false,
+      error: 'Only authorized administrators can approve purchase orders.',
+    });
+  }
+
+  const targetPo = purchaseOrders.find((p) => p.poId === req.params.poId);
+  if (!targetPo) {
+    return res.status(404).json({ success: false, error: 'Purchase order not found' });
+  }
+
+  const result = approvePurchaseOrder(targetPo, account);
+  if (!result.success || !result.purchaseOrder) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to approve purchase order',
+    });
+  }
+
+  purchaseOrders = purchaseOrders.map((p) =>
+    p.poId === result.purchaseOrder!.poId ? result.purchaseOrder! : p
+  );
+
+  return res.json({
+    success: true,
+    message: `Purchase Order ${result.purchaseOrder.poId} approved for supplier dispatch.`,
+    purchaseOrder: result.purchaseOrder,
+    purchaseOrders,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+  });
+});
+
+// Receive Supplier Purchase Order Delivery (Partial or Full)
+app.post('/api/admin/purchase-orders/:poId/receive', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account || !isAdminAccount(account)) {
+    return res.status(account ? 403 : 401).json({
+      success: false,
+      error: 'Only authorized administrators can receive supplier deliveries.',
+    });
+  }
+
+  const targetPo = purchaseOrders.find((p) => p.poId === req.params.poId);
+  if (!targetPo) {
+    return res.status(404).json({ success: false, error: 'Purchase order not found' });
+  }
+
+  const { receivedLines, receiptId } = req.body as {
+    receivedLines?: Array<{ itemId: string; quantityReceived: number }>;
+    receiptId?: string;
+  };
+
+  // If no explicit lines passed, receive all remaining quantities on the PO
+  const resolvedLines =
+    Array.isArray(receivedLines) && receivedLines.length > 0
+      ? receivedLines.map((l) => ({ itemId: l.itemId, acceptedQty: l.quantityReceived }))
+      : targetPo.items
+          .map((l) => ({
+            itemId: l.itemId,
+            acceptedQty: Math.max(0, l.orderedQty - l.receivedQty),
+          }))
+          .filter((l) => l.acceptedQty > 0);
+
+  const result = receivePurchaseOrderDelivery(
+    targetPo,
+    inventoryItems,
+    resolvedLines,
+    account,
+    receiptId || `RCPT-${targetPo.poId}-${Date.now()}`
+  );
+
+  if (!result.success || !result.updatedPO) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to receive purchase order delivery',
+    });
+  }
+
+  purchaseOrders = purchaseOrders.map((p) =>
+    p.poId === result.updatedPO!.poId ? result.updatedPO! : p
+  );
+  inventoryItems = result.updatedInventory;
+  if (result.movements.length > 0) {
+    stockMovements.unshift(...result.movements);
+  }
+
+  return res.json({
+    success: true,
+    message: `Received delivery for ${result.updatedPO.poId} (${result.updatedPO.status.replace('_', ' ')}).`,
+    purchaseOrder: result.updatedPO,
+    purchaseOrders,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+    movements: stockMovements.slice(0, 35),
+  });
+});
+
+// Cancel Supplier Purchase Order
+app.post('/api/admin/purchase-orders/:poId/cancel', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account || !isAdminAccount(account)) {
+    return res.status(account ? 403 : 401).json({
+      success: false,
+      error: 'Only authorized administrators can cancel purchase orders.',
+    });
+  }
+
+  const targetPo = purchaseOrders.find((p) => p.poId === req.params.poId);
+  if (!targetPo) {
+    return res.status(404).json({ success: false, error: 'Purchase order not found' });
+  }
+
+  const result = cancelPurchaseOrder(targetPo, account);
+  if (!result.success || !result.purchaseOrder) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to cancel purchase order',
+    });
+  }
+
+  purchaseOrders = purchaseOrders.map((p) =>
+    p.poId === result.purchaseOrder!.poId ? result.purchaseOrder! : p
+  );
+
+  return res.json({
+    success: true,
+    message: `Purchase Order ${result.purchaseOrder.poId} cancelled (inventory unchanged).`,
+    purchaseOrder: result.purchaseOrder,
+    purchaseOrders,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
   });
 });
 
@@ -661,27 +1036,18 @@ app.post('/api/auth/logout', (req: Request, res: Response) => {
 });
 
 app.get('/api/auth/me', (req: Request, res: Response) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ authenticated: false });
-  }
-  const token = authHeader.slice(7);
-  const accountId = activeSessions.get(token);
-  if (!accountId) {
-    return res.status(401).json({ authenticated: false });
-  }
-  const record = storedAccounts.find((r) => r.account.accountId === accountId);
-  if (!record) {
+  const account = getAuthenticatedAccount(req);
+  if (!account) {
     return res.status(401).json({ authenticated: false });
   }
 
   const userOrders = orders.filter(
-    (o) => o.customer.email.toLowerCase() === record.account.email.toLowerCase()
+    (o) => o.customer.email.toLowerCase() === account.email.toLowerCase()
   );
 
   return res.json({
     authenticated: true,
-    account: record.account,
+    account,
     orders: userOrders,
   });
 });

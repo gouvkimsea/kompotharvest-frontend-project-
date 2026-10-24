@@ -21,6 +21,8 @@ import {
   validateCheckoutForm,
   UserAccount,
   hasAccountPermission,
+  InventoryItem,
+  isProductOutOfStock,
 } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
@@ -35,6 +37,7 @@ interface ShopPageViewProps {
   onAddBundleToCart: (bundle: BundleItem) => void;
   onSelectProduct: (product: Product) => void;
   onSelectBundle: (bundle: BundleItem) => void;
+  inventory?: InventoryItem[];
 }
 
 export const ShopPageView: React.FC<ShopPageViewProps> = ({
@@ -43,6 +46,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
   onAddBundleToCart,
   onSelectProduct,
   onSelectBundle,
+  inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   const [activeTab, setActiveTab] = useState<'powders' | 'bundles' | 'accessories' | 'soon'>(
@@ -60,13 +64,68 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
     }
   }, [initialCategory]);
 
+  const customProducts: Product[] = inventory
+    .filter(
+      (item) =>
+        item.category !== 'Value Bundles' &&
+        !PRODUCTS.some((p) => p.id === item.id) &&
+        !BUNDLES.some((b) => b.id === item.id)
+    )
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      flavor: item.name.toLowerCase().includes('chili') ? 'Chili Lime' : 'Honey Butter',
+      packageSize: item.category === 'Glass Jars (250g)' ? '250g Jar' : '100g Pouch',
+      slug: item.id,
+      category: 'powders',
+      price: item.price,
+      originalPrice: item.price,
+      rating: 5.0,
+      reviewCount: 1,
+      image: item.image,
+      shortDesc: `${item.variantLabel} · USD ${item.price}`,
+      description: `Small-batch Kampot Harvest Co. ${item.name} (${item.variantLabel}).`,
+      hasVariants: false,
+      nutrition: {
+        servingSize: '30g (Approx. 18 cashews)',
+        calories: 165,
+        protein: '5.5g',
+        fat: '12.5g',
+        carbs: '8.5g',
+        sugar: '4.0g',
+      },
+      ingredients: 'Whole Kampot Cashews, Natural Seasoning, Sea Salt.',
+      accentColor: '#8B6D3B',
+    }));
+
+  const customBundles: BundleItem[] = inventory
+    .filter(
+      (item) =>
+        item.category === 'Value Bundles' &&
+        !BUNDLES.some((b) => b.id === item.id) &&
+        !PRODUCTS.some((p) => p.id === item.id)
+    )
+    .map((item) => ({
+      id: item.id,
+      name: item.name,
+      price: item.price,
+      originalPrice: Number((item.price * 1.25).toFixed(2)),
+      rating: 5.0,
+      image: item.image,
+      description: `Kampot Harvest Co. ${item.name} (${item.variantLabel}).`,
+      includedItems: [item.variantLabel],
+    }));
+
+  const allCatalogProducts = [...PRODUCTS, ...customProducts];
+  const allCatalogBundles = [...BUNDLES, ...customBundles];
+
   const displayedProducts =
     activeTab === 'powders'
-      ? PRODUCTS
+      ? allCatalogProducts
       : activeTab === 'accessories'
-      ? PRODUCTS.filter((p) => p.id.includes('jar'))
+      ? allCatalogProducts.filter((p) => p.packageSize === '250g Jar' || p.id.includes('jar'))
       : activeTab === 'soon'
-      ? PRODUCTS.filter((p) => p.id.includes('pouch'))
+      ? allCatalogProducts.filter((p) => p.packageSize === '100g Pouch' || p.id.includes('pouch'))
       : [];
 
   return (
@@ -129,133 +188,194 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
         <div className="relative z-10 max-w-[1380px] mx-auto px-6">
           {activeTab === 'bundles' ? (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-              {BUNDLES.map((bundle) => (
-                <div
-                  key={bundle.id}
-                  className="flex flex-col items-center text-center group"
-                >
+              {allCatalogBundles.map((bundle) => {
+                const isOutOfStock = isProductOutOfStock(inventory, bundle.id);
+                return (
                   <div
-                    onClick={() => onSelectBundle(bundle)}
-                    className="relative w-full h-[310px] flex items-center justify-center cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
+                    key={bundle.id}
+                    data-testid={`shop-bundle-card-${bundle.id}`}
+                    className="flex flex-col items-center text-center group"
                   >
-                    <div className="absolute top-2 left-4 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[58px] h-[48px] flex items-center justify-center text-[14px] font-medium shadow-md">
-                      -25%
+                    <div
+                      onClick={() => onSelectBundle(bundle)}
+                      className="relative w-full h-[310px] flex items-center justify-center cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
+                    >
+                      <div className="absolute top-2 left-4 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[58px] h-[48px] flex items-center justify-center text-[14px] font-medium shadow-md">
+                        -25%
+                      </div>
+                      <SmartImage
+                        src={bundle.image}
+                        alt={bundle.name}
+                        className={`w-full h-full object-contain drop-shadow-2xl ${
+                          isOutOfStock ? 'opacity-80' : ''
+                        }`}
+                        fallbackBg="transparent"
+                      />
+                      {isOutOfStock && (
+                        <span
+                          data-testid={`shop-bundle-bottom-out-of-stock-${bundle.id}`}
+                          className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
+                        >
+                          Out of Stock
+                        </span>
+                      )}
                     </div>
-                    <SmartImage
-                      src={bundle.image}
-                      alt={bundle.name}
-                      className="w-full h-full object-contain drop-shadow-2xl"
-                      fallbackBg="transparent"
-                    />
+                    <div className="mt-4 text-[#F2F0E3] w-full max-w-[330px]">
+                      <h3 className="text-[18px] font-medium text-[#F2F0E3]">{bundle.name}</h3>
+                      {isOutOfStock && (
+                        <p
+                          data-testid={`shop-bundle-out-of-stock-statement-${bundle.id}`}
+                          className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
+                        >
+                          Product is Out of Stock
+                        </p>
+                      )}
+                      <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
+                        <span className="text-[24px] font-normal text-[#F2F0E3]">
+                          {formatPrice(bundle.price)}
+                        </span>
+                        <span className="text-[14px] text-[#8B6D3B] line-through">
+                          {formatPrice(bundle.originalPrice)}
+                        </span>
+                        <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3]">
+                          <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          {bundle.rating}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center justify-center gap-3">
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          data-testid={`shop-bundle-action-btn-${bundle.id}`}
+                          onClick={() => {
+                            if (!isOutOfStock) onAddBundleToCart(bundle);
+                          }}
+                          className={`flex-1 py-2.5 px-5 rounded-full text-[13.5px] font-medium transition-colors ${
+                            isOutOfStock
+                              ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                              : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                          }`}
+                        >
+                          {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectBundle(bundle)}
+                          className="flex-1 py-2.5 px-5 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer"
+                        >
+                          Learn more
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-4 text-[#F2F0E3] w-full max-w-[330px]">
-                    <h3 className="text-[18px] font-medium text-[#F2F0E3]">{bundle.name}</h3>
-                    <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
-                      <span className="text-[24px] font-normal text-[#F2F0E3]">
-                        {formatPrice(bundle.price)}
-                      </span>
-                      <span className="text-[14px] text-[#8B6D3B] line-through">
-                        {formatPrice(bundle.originalPrice)}
-                      </span>
-                      <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3]">
-                        <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        {bundle.rating}
-                      </span>
-                    </div>
-                    <div className="mt-4 flex items-center justify-center gap-3">
-                      <button
-                        type="button"
-                        onClick={() => onAddBundleToCart(bundle)}
-                        className="flex-1 py-2.5 px-5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer"
-                      >
-                        {t('btn_add_to_cart')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => onSelectBundle(bundle)}
-                        className="flex-1 py-2.5 px-5 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer"
-                      >
-                        Learn more
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-x-8 gap-y-14">
-              {displayedProducts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex flex-col items-center text-center group"
-                >
+              {displayedProducts.map((product) => {
+                const isOutOfStock = isProductOutOfStock(inventory, product.id);
+                return (
                   <div
-                    onClick={() => onSelectProduct(product)}
-                    className="relative w-[240px] h-[315px] flex items-center justify-center cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
+                    key={product.id}
+                    data-testid={`shop-product-card-${product.id}`}
+                    className="flex flex-col items-center text-center group"
                   >
-                    {product.discountBadge && (
-                      <div className="absolute top-1 left-2 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[54px] h-[46px] flex items-center justify-center text-[14px] font-medium shadow-md">
-                        {product.discountBadge}
-                      </div>
-                    )}
-                    <SmartImage
-                      src={product.image}
-                      alt={`${product.name} — ${product.flavor} (${product.packageSize})`}
-                      className="w-full h-full object-contain drop-shadow-2xl"
-                      fallbackBg="transparent"
-                    />
-                  </div>
-
-                  {/* Direct Text & Buttons on Green Wave matching ref-shop.png */}
-                  <div className="mt-3 w-full max-w-[280px] text-[#F2F0E3]">
-                    <h3
+                    <div
                       onClick={() => onSelectProduct(product)}
-                      className="text-[17px] font-semibold text-[#F2F0E3] hover:text-[#9AB87A] cursor-pointer"
+                      className="relative w-[240px] h-[315px] flex items-center justify-center cursor-pointer group-hover:-translate-y-1.5 transition-transform duration-300"
                     >
-                      {product.name}
-                    </h3>
-                    <p className="text-[13.5px] font-medium text-[#9AB87A] mt-0.5">
-                      {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
-                    </p>
-
-                    <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
-                      <span className="text-[23px] font-semibold text-[#F2F0E3]">
-                        {formatPrice(product.price)}
-                      </span>
-                      {product.originalPrice > product.price && (
-                        <span className="text-[13.5px] text-[#8B6D3B] line-through">
-                          {formatPrice(product.originalPrice)}
+                      {product.discountBadge && (
+                        <div className="absolute top-1 left-2 z-20 blob-badge bg-[#2D471E] text-[#F2F0E3] w-[54px] h-[46px] flex items-center justify-center text-[14px] font-medium shadow-md">
+                          {product.discountBadge}
+                        </div>
+                      )}
+                      <SmartImage
+                        src={product.image}
+                        alt={`${product.name} — ${product.flavor} (${product.packageSize})`}
+                        className={`w-full h-full object-contain drop-shadow-2xl ${
+                          isOutOfStock ? 'opacity-80' : ''
+                        }`}
+                        fallbackBg="transparent"
+                      />
+                      {isOutOfStock && (
+                        <span
+                          data-testid={`shop-product-bottom-out-of-stock-${product.id}`}
+                          className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
+                        >
+                          Out of Stock
                         </span>
                       )}
-                      <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3] ml-1">
-                        <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
-                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                        </svg>
-                        {product.rating}
-                      </span>
                     </div>
 
-                    <div className="mt-4 flex items-center justify-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => onAddProductToCart(product)}
-                        className="flex-1 py-2.5 px-4 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
-                      >
-                        {t('btn_add_to_cart')}
-                      </button>
-                      <button
-                        type="button"
+                    {/* Direct Text & Buttons on Green Wave matching ref-shop.png */}
+                    <div className="mt-3 w-full max-w-[280px] text-[#F2F0E3]">
+                      <h3
                         onClick={() => onSelectProduct(product)}
-                        className="flex-1 py-2.5 px-4 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                        className="text-[17px] font-semibold text-[#F2F0E3] hover:text-[#9AB87A] cursor-pointer"
                       >
-                        {t('btn_learn_more', 'Learn more')}
-                      </button>
+                        {product.name}
+                      </h3>
+                      <p className="text-[13.5px] font-medium text-[#9AB87A] mt-0.5">
+                        {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
+                      </p>
+
+                      {isOutOfStock && (
+                        <p
+                          data-testid={`shop-product-out-of-stock-statement-${product.id}`}
+                          className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
+                        >
+                          Product is Out of Stock
+                        </p>
+                      )}
+
+                      <div className="mt-1.5 flex items-baseline justify-center gap-2.5 tabular-nums">
+                        <span className="text-[23px] font-semibold text-[#F2F0E3]">
+                          {formatPrice(product.price)}
+                        </span>
+                        {product.originalPrice > product.price && (
+                          <span className="text-[13.5px] text-[#8B6D3B] line-through">
+                            {formatPrice(product.originalPrice)}
+                          </span>
+                        )}
+                        <span className="inline-flex items-center gap-1 text-[13px] text-[#F2F0E3] ml-1">
+                          <svg className="w-3.5 h-3.5 text-[#EAB308] fill-current" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                          </svg>
+                          {product.rating}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-center gap-2.5">
+                        <button
+                          type="button"
+                          disabled={isOutOfStock}
+                          data-testid={`shop-product-action-btn-${product.id}`}
+                          onClick={() => {
+                            if (!isOutOfStock) onAddProductToCart(product);
+                          }}
+                          className={`flex-1 py-2.5 px-4 rounded-full text-[13.5px] font-medium transition-colors whitespace-nowrap ${
+                            isOutOfStock
+                              ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                              : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                          }`}
+                        >
+                          {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => onSelectProduct(product)}
+                          className="flex-1 py-2.5 px-4 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                        >
+                          {t('btn_learn_more', 'Learn more')}
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -664,6 +784,7 @@ interface CartDrawerProps {
   onClearCart: () => void;
   onTrackOrder?: (orderId: string) => void;
   currentUser?: UserAccount | null;
+  onInventoryUpdated?: (updatedInventory: InventoryItem[]) => void;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -677,6 +798,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onClearCart,
   onTrackOrder,
   currentUser,
+  onInventoryUpdated,
 }) => {
   const { t, formatPrice, currency } = useI18n();
   const [step, setStep] = useState<'cart' | 'checkout' | 'confirmed'>('cart');
@@ -690,6 +812,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     pincode: '',
   });
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [checkoutApiError, setCheckoutApiError] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string>('KH-2026-1042');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
 
@@ -712,6 +835,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setCheckoutApiError(null);
     const validation = validateCheckoutForm(form);
     if (!validation.valid) {
       setFormErrors(validation.errors as Record<string, string>);
@@ -738,17 +862,27 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         }),
       });
       const data = await res.json();
+      if (!res.ok || data.success === false) {
+        setCheckoutApiError(data.error || 'Unable to place order due to insufficient stock.');
+        setIsSubmittingOrder(false);
+        return;
+      }
+      if (data.inventory && onInventoryUpdated) {
+        onInventoryUpdated(data.inventory);
+      }
       if (data.order?.orderId) {
         setOrderId(data.order.orderId);
       } else {
         setOrderId(`KH-2026-${Math.floor(100000 + Math.random() * 900000)}`);
       }
-    } catch {
-      setOrderId(`KH-2026-${Math.floor(100000 + Math.random() * 900000)}`);
-    } finally {
-      setIsSubmittingOrder(false);
       setStep('confirmed');
       onClearCart();
+    } catch {
+      setOrderId(`KH-2026-${Math.floor(100000 + Math.random() * 900000)}`);
+      setStep('confirmed');
+      onClearCart();
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -851,6 +985,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
           ) : step === 'checkout' ? (
             <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">
+              {checkoutApiError && (
+                <div
+                  role="alert"
+                  className="p-3 rounded-xl bg-[#B83A2A]/10 border border-[#B83A2A]/30 text-[#B83A2A] text-xs font-semibold"
+                >
+                  {checkoutApiError}
+                </div>
+              )}
               <div>
                 <label htmlFor="chk-name" className="block text-xs font-bold uppercase mb-1">
                   {t('form_full_name')} *
@@ -1131,6 +1273,7 @@ interface ProductDetailModalProps {
   onClose: () => void;
   onAddProductToCart: (product: Product, isAutoship?: boolean, variantLabel?: string, customPrice?: number) => void;
   onAddBundleToCart: (bundle: BundleItem) => void;
+  inventory?: InventoryItem[];
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -1139,6 +1282,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onClose,
   onAddProductToCart,
   onAddBundleToCart,
+  inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
@@ -1147,6 +1291,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   if (!product && !bundle) return null;
 
   if (bundle) {
+    const isBundleOutOfStock = isProductOutOfStock(inventory, bundle.id);
     return (
       <div
         className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
@@ -1174,16 +1319,26 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 items-center">
-            <div className="bg-[#384A22] rounded-2xl p-4 flex items-center justify-center h-[260px]">
+            <div className="relative bg-[#384A22] rounded-2xl p-4 flex items-center justify-center h-[260px]">
               <SmartImage
                 src={bundle.image}
                 alt={bundle.name}
                 className="w-full h-full object-contain"
                 fallbackBg="transparent"
               />
+              {isBundleOutOfStock && (
+                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-xs font-bold uppercase tracking-wider shadow-md">
+                  Out of Stock
+                </span>
+              )}
             </div>
 
             <div>
+              {isBundleOutOfStock && (
+                <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mb-2">
+                  This product is currently Out of Stock.
+                </p>
+              )}
               <p className="text-sm text-[#384A22]/85 leading-relaxed mb-4">{bundle.description}</p>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#384A22] mb-2">
                 Included in Your Box:
@@ -1205,13 +1360,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               <button
                 type="button"
+                disabled={isBundleOutOfStock}
                 onClick={() => {
+                  if (isBundleOutOfStock) return;
                   onAddBundleToCart(bundle);
                   onClose();
                 }}
-                className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
+                className={`w-full py-3.5 rounded-full font-semibold text-sm shadow-md transition-colors ${
+                  isBundleOutOfStock
+                    ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                    : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                }`}
               >
-                {t('btn_add_to_cart')} — {t('hero_bundle_offer_title', '25% OFF')}
+                {isBundleOutOfStock
+                  ? 'Out of Stock'
+                  : `${t('btn_add_to_cart')} — ${t('hero_bundle_offer_title', '25% OFF')}`}
               </button>
             </div>
           </div>
@@ -1227,6 +1390,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const activePrice = activeVariant ? activeVariant.price : product!.price;
   const activeOrigPrice = activeVariant ? activeVariant.originalPrice : product!.originalPrice;
+  const isSelectedProductOutOfStock = isProductOutOfStock(
+    inventory,
+    activeVariant?.id || product!.id,
+    activeVariant?.label || product!.packageSize
+  );
 
   return (
     <div
@@ -1264,9 +1432,19 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               className="w-full h-full object-contain drop-shadow-2xl"
               fallbackBg="transparent"
             />
+            {isSelectedProductOutOfStock && (
+              <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-xs font-bold uppercase tracking-wider shadow-md">
+                Out of Stock
+              </span>
+            )}
           </div>
 
           <div className="md:col-span-7 space-y-4">
+            {isSelectedProductOutOfStock && (
+              <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
+                This product is currently Out of Stock.
+              </p>
+            )}
             <p className="text-sm text-[#384A22]/85 leading-relaxed">{product!.description}</p>
 
             {/* Variant Selector */}
@@ -1276,20 +1454,24 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   {t('flavors_title', 'Package Size')}:
                 </span>
                 <div className="flex flex-wrap gap-2">
-                  {product!.variants.map((v, i) => (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => setSelectedVariantIdx(i)}
-                      className={`px-4 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer ${
-                        selectedVariantIdx === i
-                          ? 'bg-[#384A22] text-[#F2F0E3]'
-                          : 'bg-white text-[#384A22] border border-[#384A22]/25'
-                      }`}
-                    >
-                      {v.label} — {formatPrice(v.price)}
-                    </button>
-                  ))}
+                  {product!.variants.map((v, i) => {
+                    const variantOut = isProductOutOfStock(inventory, v.id, v.label);
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariantIdx(i)}
+                        className={`px-4 py-2 rounded-full text-xs font-bold transition-colors cursor-pointer ${
+                          selectedVariantIdx === i
+                            ? 'bg-[#384A22] text-[#F2F0E3]'
+                            : 'bg-white text-[#384A22] border border-[#384A22]/25'
+                        }`}
+                      >
+                        {v.label} — {formatPrice(v.price)}
+                        {variantOut ? ' (Out of Stock)' : ''}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             )}
@@ -1355,7 +1537,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               <button
                 type="button"
+                disabled={isSelectedProductOutOfStock}
                 onClick={() => {
+                  if (isSelectedProductOutOfStock) return;
                   onAddProductToCart(
                     product!,
                     isAutoship,
@@ -1364,9 +1548,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   );
                   onClose();
                 }}
-                className="px-8 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
+                className={`px-8 py-3.5 rounded-full font-semibold text-sm shadow-md transition-colors ${
+                  isSelectedProductOutOfStock
+                    ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
+                    : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                }`}
               >
-                {t('btn_add_to_cart')}
+                {isSelectedProductOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
               </button>
             </div>
           </div>
