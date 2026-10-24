@@ -365,12 +365,12 @@ export default function App() {
 
       {/* Non-intrusive Cart Notification Toast */}
       {toastMessage && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#384A22] text-[#F2F0E3] px-6 py-3 rounded-full shadow-2xl border border-[#F2F0E3]/20 flex items-center gap-3 text-sm font-medium">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#384A22] text-[#F2F0E3] px-4 sm:px-6 py-3 rounded-full shadow-2xl border border-[#F2F0E3]/20 flex items-center justify-center gap-2 sm:gap-3 text-xs sm:text-sm font-medium max-w-[92vw] text-center flex-wrap">
           <span>✓ {toastMessage}</span>
           <button
             type="button"
             onClick={() => setIsCartOpen(true)}
-            className="underline text-[#9AB87A] font-bold cursor-pointer"
+            className="underline text-[#9AB87A] font-bold cursor-pointer whitespace-nowrap"
           >
             {t('cart_view_bag')}
           </button>

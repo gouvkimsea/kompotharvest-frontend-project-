@@ -100,13 +100,13 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
         className="w-full max-w-2xl bg-[#F2F0E3] text-[#384A22] rounded-[28px] shadow-2xl border border-[#384A22]/15 overflow-hidden my-8"
       >
         {/* Modal Header */}
-        <div className="bg-[#384A22] text-[#F2F0E3] px-6 sm:px-8 py-6 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-[#F2F0E3]/12 flex items-center justify-center shrink-0">
-              <Truck className="w-6 h-6 text-[#9AB87A]" />
+        <div className="bg-[#384A22] text-[#F2F0E3] px-4 min-[380px]:px-6 sm:px-8 py-4 sm:py-6 flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-[#F2F0E3]/12 flex items-center justify-center shrink-0">
+              <Truck className="w-5 h-5 sm:w-6 sm:h-6 text-[#9AB87A]" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
+              <h2 className="text-lg sm:text-2xl font-bold tracking-tight">
                 {t('track_modal_title', 'Track Your Order')}
               </h2>
               <p className="text-xs sm:text-sm text-[#F2F0E3]/80 mt-0.5">
@@ -128,7 +128,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 sm:p-8 max-h-[78vh] overflow-y-auto space-y-6">
+        <div className="p-4 min-[380px]:p-6 sm:p-8 max-h-[82vh] overflow-y-auto space-y-6">
           {/* Search Form */}
           <form onSubmit={handleSubmit} className="space-y-3" noValidate>
             <label
@@ -149,7 +149,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                     if (errorMsg) setErrorMsg(null);
                   }}
                   placeholder={t('track_input_placeholder', 'e.g. KH-2026-1042')}
-                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-[#384A22]/25 text-sm font-medium text-[#384A22] placeholder:text-[#384A22]/40 focus:outline-none focus:border-[#384A22] tabular-nums"
+                  className="w-full pl-11 pr-4 py-3 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm font-medium text-[#384A22] placeholder:text-[#384A22]/40 focus:outline-none focus:border-[#384A22] tabular-nums"
                 />
               </div>
               <button

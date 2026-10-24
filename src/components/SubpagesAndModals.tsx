@@ -146,7 +146,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
         </p>
 
         {/* White Pill Segmented Switcher (All Products | Bundles | 250g Jar | 100g Pouch) */}
-        <div className="mt-7 inline-flex flex-wrap items-center justify-center bg-[#F7F5E9] rounded-full p-1.5 shadow-sm border border-[#384A22]/10">
+        <div className="mt-7 inline-flex flex-wrap items-center justify-center bg-[#F7F5E9] rounded-2xl min-[480px]:rounded-full p-1.5 shadow-sm border border-[#384A22]/10 max-w-full">
           {[
             { id: 'powders', label: t('cat_all') },
             { id: 'bundles', label: t('cat_bundles') },
@@ -161,7 +161,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                 onClick={() =>
                   setActiveTab(tab.id as 'powders' | 'bundles' | 'accessories' | 'soon')
                 }
-                className={`px-7 py-3 rounded-full text-[16px] sm:text-[18px] transition-colors cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 min-[380px]:px-5 sm:px-7 py-2 sm:py-3 rounded-full text-[13.5px] min-[380px]:text-[15px] sm:text-[18px] transition-colors cursor-pointer whitespace-nowrap ${
                   isActive
                     ? 'bg-[#314B1C] text-[#F2F0E3] font-medium shadow'
                     : 'text-[#384A22] hover:text-[#768E5C] font-normal'
@@ -350,7 +350,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         </span>
                       </div>
 
-                      <div className="mt-4 flex items-center justify-center gap-2.5">
+                      <div className="mt-4 flex items-center justify-center gap-2">
                         <button
                           type="button"
                           disabled={isOutOfStock}
@@ -358,7 +358,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                           onClick={() => {
                             if (!isOutOfStock) onAddProductToCart(product);
                           }}
-                          className={`flex-1 py-2.5 px-4 rounded-full text-[13.5px] font-medium transition-colors whitespace-nowrap ${
+                          className={`flex-1 py-2.5 px-2.5 min-[380px]:px-4 rounded-full text-[12.5px] min-[380px]:text-[13.5px] font-medium transition-colors whitespace-nowrap ${
                             isOutOfStock
                               ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed font-bold'
                               : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
@@ -369,7 +369,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         <button
                           type="button"
                           onClick={() => onSelectProduct(product)}
-                          className="flex-1 py-2.5 px-4 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                          className="flex-1 py-2.5 px-2.5 min-[380px]:px-4 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[12.5px] min-[380px]:text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
                         >
                           {t('btn_learn_more', 'Learn more')}
                         </button>
@@ -1005,7 +1005,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
                   placeholder="e.g. Sokha Chan"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                 />
                 {formErrors.fullName && (
                   <p className="text-xs text-red-700 mt-1">{formErrors.fullName}</p>
@@ -1023,7 +1023,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     value={form.email}
                     onChange={(e) => setForm({ ...form, email: e.target.value })}
                     placeholder="you@example.com"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.email && (
                     <p className="text-xs text-red-700 mt-1">{formErrors.email}</p>
@@ -1040,7 +1040,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     value={form.phone}
                     onChange={(e) => setForm({ ...form, phone: e.target.value })}
                     placeholder="+855 12 345 678"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.phone && (
                     <p className="text-xs text-red-700 mt-1">{formErrors.phone}</p>
@@ -1058,7 +1058,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   value={form.address}
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   placeholder="Street, Sangkat / District"
-                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                  className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                 />
                 {formErrors.address && (
                   <p className="text-xs text-red-700 mt-1">{formErrors.address}</p>
@@ -1076,7 +1076,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     value={form.city}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
                     placeholder="Phnom Penh"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.city && (
                     <p className="text-xs text-red-700 mt-1">{formErrors.city}</p>
@@ -1093,7 +1093,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     value={form.pincode}
                     onChange={(e) => setForm({ ...form, pincode: e.target.value })}
                     placeholder="12000"
-                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                    className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                   />
                   {formErrors.pincode && (
                     <p className="text-xs text-red-700 mt-1">{formErrors.pincode}</p>
@@ -1191,7 +1191,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     value={promoInput}
                     onChange={(e) => setPromoInput(e.target.value)}
                     placeholder={t('promo_code_placeholder')}
-                    className="flex-1 px-3.5 py-2 rounded-full bg-white border border-[#384A22]/25 text-xs focus:outline-none"
+                    className="flex-1 px-3.5 py-2 rounded-full bg-white border border-[#384A22]/25 text-base sm:text-xs focus:outline-none"
                   />
                   <button
                     type="button"
@@ -1972,7 +1972,7 @@ export const FirstOrderOfferModal: React.FC<FirstOrderOfferModalProps> = ({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[920px] min-h-[540px] bg-[#ECEAE0] rounded-xs overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl"
+        className="relative w-full max-w-[920px] min-h-[500px] max-h-[92vh] overflow-y-auto bg-[#ECEAE0] rounded-2xl md:rounded-xs overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Enjoy 15% OFF Your First Order"
@@ -2098,7 +2098,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
       onClick={onClose}
     >
       <div
-        className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-md w-full p-6 sm:p-8 shadow-2xl"
+        className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Share your Botenz story"
@@ -2148,7 +2148,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Priya Nair"
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm"
               />
             </div>
             <div>
@@ -2161,7 +2161,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="e.g. Nutrition Coach, Home Baker, Runner"
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm"
               />
             </div>
             <div>
@@ -2174,7 +2174,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder={t('fb_placeholder_msg', 'How do you enjoy Kampot Harvest Artisan Cashews?')}
-                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm"
+                className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm"
               />
             </div>
             {error && <p className="text-xs text-red-700">{error}</p>}

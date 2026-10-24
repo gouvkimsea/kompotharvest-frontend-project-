@@ -174,7 +174,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
             <button
               type="button"
               onClick={() => onNavigate('shop', 'powders')}
-              className="px-10 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[16px] font-medium shadow-md transition-colors whitespace-nowrap cursor-pointer"
+              className="px-6 min-[380px]:px-10 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[15px] sm:text-[16px] font-medium shadow-md transition-colors whitespace-nowrap cursor-pointer max-w-[88vw] text-center"
             >
               {t('btn_explore_products')}
             </button>
@@ -207,7 +207,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                 setCarouselOffset((prev) => (prev - 1 + PRODUCTS.length) % PRODUCTS.length)
               }
               aria-label="Previous flavor"
-              className="w-8 h-8 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] flex items-center justify-center transition-colors cursor-pointer text-sm"
+              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] flex items-center justify-center transition-colors cursor-pointer text-base sm:text-sm"
             >
               ‹
             </button>
@@ -215,7 +215,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
               type="button"
               onClick={() => setCarouselOffset((prev) => (prev + 1) % PRODUCTS.length)}
               aria-label="Next flavor"
-              className="w-8 h-8 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] flex items-center justify-center transition-colors cursor-pointer text-sm"
+              className="w-9 h-9 sm:w-8 sm:h-8 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] flex items-center justify-center transition-colors cursor-pointer text-base sm:text-sm"
             >
               ›
             </button>

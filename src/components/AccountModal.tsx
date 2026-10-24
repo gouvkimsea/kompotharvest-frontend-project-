@@ -225,18 +225,19 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     >
       {/* Clean Full-Screen Top Navigation Bar */}
       <header className="w-full border-b border-[#384A22]/10 bg-[#F2F0E3]/95 backdrop-blur-xs sticky top-0 z-10">
-        <div className="max-w-5xl mx-auto px-4 sm:px-8 h-[76px] flex items-center justify-between">
+        <div className="max-w-5xl mx-auto px-3 sm:px-8 h-[76px] flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={onClose}
             aria-label="Close account page"
-            className="inline-flex items-center gap-2 text-sm font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer shrink-0"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Store</span>
+            <span className="hidden min-[380px]:inline">Back to Store</span>
+            <span className="min-[380px]:hidden">Back</span>
           </button>
 
-          <BotenzLogo variant="green" className="h-[48px] w-auto object-contain" />
+          <BotenzLogo variant="green" className="h-[38px] min-[380px]:h-[44px] sm:h-[48px] w-auto object-contain" />
 
           <div className="w-[100px] flex justify-end">
             {currentUser && (
@@ -495,7 +496,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         }
                       }}
                       placeholder="e.g. Dara Pich"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                     />
                     {fieldErrors.fullName && (
                       <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.fullName}</p>
@@ -521,7 +522,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         }
                       }}
                       placeholder="you@example.com"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                     />
                     {fieldErrors.email && (
                       <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.email}</p>
@@ -548,7 +549,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           }
                         }}
                         placeholder="Min. 8 chars"
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                       />
                       {fieldErrors.password && (
                         <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.password}</p>
@@ -573,7 +574,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                           }
                         }}
                         placeholder="Repeat password"
-                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                       />
                       {fieldErrors.confirmPassword && (
                         <p className="text-xs text-[#B83A2A] mt-1">
@@ -606,7 +607,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="sokha.chan@example.com"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                     />
                   </div>
 
@@ -623,7 +624,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
                     />
                   </div>
 

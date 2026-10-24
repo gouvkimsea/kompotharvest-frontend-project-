@@ -945,7 +945,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               <form
                 onSubmit={handleCreateNewProductSubmit}
                 data-testid="add-product-panel"
-                className="p-6 bg-white space-y-5"
+                className="p-4 sm:p-6 bg-white space-y-5 max-h-[75vh] overflow-y-auto"
                 noValidate
               >
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -970,7 +970,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                         }
                       }}
                       placeholder="e.g. Artisan Roasted Cashews — Sea Salt Caramel (250g Jar)"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.name && (
                       <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.name}</p>
@@ -1010,7 +1010,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                           image: autoImg,
                         });
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
                     >
                       <option value="Single Pouches (100g)">Single Pouches (100g)</option>
                       <option value="Glass Jars (250g)">Glass Jars (250g)</option>
@@ -1042,7 +1042,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                         }
                       }}
                       placeholder="e.g. KH-SC-250J"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-mono text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-mono text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.sku && (
                       <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.sku}</p>
@@ -1071,7 +1071,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                           setNewProductErrors({ ...newProductErrors, initialStock: undefined });
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.initialStock && (
                       <p className="text-xs text-[#B83A2A] mt-1">
@@ -1102,7 +1102,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                           setNewProductErrors({ ...newProductErrors, price: undefined });
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.price && (
                       <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.price}</p>
@@ -1130,7 +1130,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                           setNewProductErrors({ ...newProductErrors, unitCost: undefined });
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.unitCost && (
                       <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.unitCost}</p>
@@ -1163,7 +1163,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                           });
                         }
                       }}
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                     {newProductErrors.reorderThreshold && (
                       <p className="text-xs text-[#B83A2A] mt-1">
@@ -1189,7 +1189,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                         setNewProductForm({ ...newProductForm, variantLabel: e.target.value })
                       }
                       placeholder="e.g. Sea Salt Caramel · 250g Jar"
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
                     />
                   </div>
 
@@ -1207,7 +1207,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                       onChange={(e) =>
                         setNewProductForm({ ...newProductForm, image: e.target.value })
                       }
-                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
                     >
                       <option value="/assets/aistudio/product-honey-butter-jar-250g.png">
                         250g Glass Jar — Golden Label
@@ -1256,7 +1256,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
         )}
 
         {/* Search, Category Filter, Status Filter, and Sort Bar */}
-        <div className="bg-white rounded-2xl p-5 border border-[#384A22]/12 shadow-xs space-y-4">
+        <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[#384A22]/12 shadow-xs space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
             {/* Search Input */}
             <div className="md:col-span-5 relative">
@@ -1267,7 +1267,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search by product name, SKU, or barcode..."
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm focus:outline-none focus:border-[#384A22]"
               />
             </div>
 
@@ -1278,7 +1278,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                 data-testid="inventory-category-select"
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
               >
                 <option value="all">All Categories</option>
                 <option value="Single Pouches (100g)">Single Pouches (100g)</option>
@@ -1294,7 +1294,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                 data-testid="inventory-status-select"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
-                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
               >
                 <option value="all">All Statuses</option>
                 <option value="in_stock">In Stock</option>
@@ -1312,7 +1312,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                   data-testid="inventory-sort-select"
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value as SortField)}
-                  className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                  className="w-full pl-8 pr-3 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-base sm:text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
                 >
                   <option value="stock_asc">Stock: Low → High</option>
                   <option value="stock_desc">Stock: High → Low</option>

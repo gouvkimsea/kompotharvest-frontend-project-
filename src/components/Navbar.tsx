@@ -122,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       className="sticky top-0 z-40 w-full bg-[#F2F0E3]/95 backdrop-blur-sm transition-colors border-b border-[#384A22]/10"
       onMouseLeave={handleMouseLeave}
     >
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-12 h-[84px] flex items-center justify-between gap-4 lg:gap-8">
+      <div className="max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-12 h-[84px] flex items-center justify-between gap-2 sm:gap-4 lg:gap-8">
         {/* Zone 1: Brand Wordmark / Logo */}
         <a
           href="#top"
@@ -133,7 +133,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="shrink-0 focus:outline-none"
           aria-label="Home"
         >
-          <BotenzLogo variant="green" className="h-[58px] sm:h-[66px] w-auto object-contain" />
+          <BotenzLogo variant="green" className="h-[46px] min-[360px]:h-[54px] sm:h-[66px] w-auto object-contain" />
         </a>
 
         {/* Zone 2: Primary Navigation Links */}
@@ -327,7 +327,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             type="button"
             onClick={onOpenCart}
             aria-label={`Shopping Cart with ${cartCount} items, total ${formatPrice(cartTotal)}`}
-            className="inline-flex items-center justify-center gap-2 px-3.5 sm:px-5 py-2 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer min-w-[105px] sm:min-w-[116px] h-[44px] sm:h-[48px]"
+            className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-2.5 min-[360px]:px-3.5 sm:px-5 py-2 rounded-full border border-[#384A22] text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] transition-colors cursor-pointer min-w-[88px] min-[360px]:min-w-[105px] sm:min-w-[116px] h-[44px] sm:h-[48px]"
           >
             {/* Custom Basket Icon matching Botenz header */}
             <svg
@@ -753,6 +753,16 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               {t('nav_recipes')}
             </button>
+            {isAdmin && (
+              <button
+                type="button"
+                data-testid="mobile-nav-admin-inventory-btn"
+                onClick={() => handleNavClick('admin_inventory')}
+                className="block w-full text-left py-2.5 text-base font-bold text-[#8B6D3B] border-b border-[#384A22]/10"
+              >
+                Inventory Overview
+              </button>
+            )}
             {onOpenAccountModal && (
               <button
                 type="button"

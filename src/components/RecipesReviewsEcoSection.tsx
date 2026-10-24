@@ -182,24 +182,24 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
             <h4 className="text-[20px] sm:text-[22px] font-extralight text-[#F2F0E3] mb-3">
               {t('feedback_tell_story', 'Tell your story')}
             </h4>
-            <div className="flex items-center justify-center gap-3">
+            <div className="flex items-center justify-center gap-2 sm:gap-3 max-w-full px-2">
               <SmartImage
                 src={ASSETS.feedbackSparkleLeft}
                 alt="Decorative stars left"
-                className="w-16 sm:w-20 h-auto object-contain"
+                className="hidden sm:block w-12 sm:w-20 h-auto object-contain shrink-0"
                 fallbackBg="transparent"
               />
               <button
                 type="button"
                 onClick={onOpenFeedbackModal}
-                className="px-10 py-4 rounded-full bg-[#F2F0E3] hover:bg-white text-[#384A22] text-[22px] sm:text-[26px] font-normal shadow-lg transition-transform hover:scale-105 cursor-pointer"
+                className="px-6 min-[400px]:px-10 py-3 sm:py-4 rounded-full bg-[#F2F0E3] hover:bg-white text-[#384A22] text-[17px] min-[400px]:text-[20px] sm:text-[26px] font-normal shadow-lg transition-transform hover:scale-105 cursor-pointer max-w-full leading-tight"
               >
                 {t('btn_share_feedback', 'Share your feedback')}
               </button>
               <SmartImage
                 src={ASSETS.feedbackSparkleRight}
                 alt="Decorative stars right"
-                className="w-16 sm:w-20 h-auto object-contain"
+                className="hidden sm:block w-12 sm:w-20 h-auto object-contain shrink-0"
                 fallbackBg="transparent"
               />
             </div>

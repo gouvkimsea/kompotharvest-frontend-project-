@@ -219,9 +219,9 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 {t('enjoy_combine_stir', 'Combine and stir\nuntil smooth')}
               </p>
 
-              <div className="relative flex items-center justify-center gap-2 sm:gap-4 w-full max-w-[600px]">
+              <div className="relative flex items-center justify-center gap-1 sm:gap-4 w-full max-w-[600px]">
                 {/* Left Blob: 2 spoons botenz powder */}
-                <div className="w-[240px] sm:w-[290px]">
+                <div className="w-[120px] min-[360px]:w-[140px] sm:w-[290px] shrink-0">
                   <SmartImage
                     src={ASSETS.howToEnjoyTwoSpoons}
                     alt="2 spoons how to mix botenz"
@@ -231,12 +231,12 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
                 </div>
 
                 {/* Center Brown Plus Circle */}
-                <div className="z-10 -mx-6 sm:-mx-8 w-16 h-16 sm:w-24 sm:h-24 rounded-full bg-[#8B6D3B] text-[#F2F0E3] flex items-center justify-center text-3xl sm:text-5xl font-light shadow-lg shrink-0">
+                <div className="z-10 -mx-3 min-[360px]:-mx-5 sm:-mx-8 w-10 h-10 min-[360px]:w-14 min-[360px]:h-14 sm:w-24 sm:h-24 rounded-full bg-[#8B6D3B] text-[#F2F0E3] flex items-center justify-center text-xl min-[360px]:text-3xl sm:text-5xl font-light shadow-lg shrink-0">
                   +
                 </div>
 
                 {/* Right Blob: 1.5 spoons water or milk */}
-                <div className="w-[240px] sm:w-[290px]">
+                <div className="w-[120px] min-[360px]:w-[140px] sm:w-[290px] shrink-0">
                   <SmartImage
                     src={ASSETS.howToEnjoyWaterMilk}
                     alt="half a spoon half other spoon low calories"

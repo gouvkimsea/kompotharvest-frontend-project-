@@ -216,7 +216,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   onNavigate('shop', 'powders');
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="px-9 py-3 rounded-full bg-[#6E8450] hover:bg-[#384A22] text-white text-[18px] font-normal transition-colors shrink-0 cursor-pointer"
+                className="w-full sm:w-auto text-center px-9 py-3 rounded-full bg-[#6E8450] hover:bg-[#384A22] text-white text-[18px] font-normal transition-colors shrink-0 cursor-pointer"
               >
                 {t('btn_order_now', 'Order Now')}
               </button>

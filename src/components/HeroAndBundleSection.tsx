@@ -178,16 +178,16 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
         {/* 5 Overlapping Organic Green Stat Blobs + Cream Feature Card */}
         <div className="relative z-20 w-full max-w-[850px] mx-auto px-4">
           {/* Top 5 Green Organic Blobs */}
-          <div className="grid grid-cols-5 gap-2 sm:gap-4 px-2 sm:px-6 -mb-9 relative z-20">
+          <div className="grid grid-cols-5 gap-1.5 sm:gap-4 px-1 sm:px-6 -mb-9 relative z-20">
             {HERO_STATS.map((stat, idx) => (
               <div
                 key={idx}
-                className="blob-badge bg-[#2D471E] text-[#F2F0E3] h-[72px] sm:h-[94px] flex flex-col items-center justify-center text-center shadow-md px-2"
+                className="blob-badge bg-[#2D471E] text-[#F2F0E3] h-[72px] sm:h-[94px] flex flex-col items-center justify-center text-center shadow-md px-1 sm:px-2"
               >
-                <span className="text-[16px] sm:text-[25px] font-medium leading-tight tracking-tight">
+                <span className="text-[12px] min-[380px]:text-[15px] sm:text-[25px] font-medium leading-tight tracking-tight">
                   {stat.top}
                 </span>
-                <span className="text-[11px] sm:text-[15px] font-light text-[#D5DEC8] leading-tight mt-0.5">
+                <span className="text-[9px] min-[380px]:text-[11px] sm:text-[15px] font-light text-[#D5DEC8] leading-tight mt-0.5">
                   {stat.bottom}
                 </span>
               </div>
@@ -213,7 +213,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                     <div className="mb-2 group-hover:scale-110 transition-transform">
                       <FeatureIcon type={feat.iconType} />
                     </div>
-                    <h3 className="text-[11px] sm:text-[15px] font-extrabold text-[#384A22] leading-[1.2] whitespace-pre-line">
+                    <h3 className="text-[9px] min-[380px]:text-[11px] sm:text-[15px] font-extrabold text-[#384A22] leading-[1.2] whitespace-pre-line break-words">
                       {feat.title}
                     </h3>
                   </button>
@@ -271,7 +271,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
 
           {/* Center 25% OFF Offer Block */}
           <div className="flex-1 text-center z-10 px-4 max-w-xl mx-auto">
-            <h2 className="text-[68px] sm:text-[96px] lg:text-[115px] font-extrabold text-[#F2F0E3] leading-none tracking-tight">
+            <h2 className="text-[44px] min-[360px]:text-[56px] sm:text-[96px] lg:text-[115px] font-extrabold text-[#F2F0E3] leading-none tracking-tight break-words max-w-full">
               {t('hero_bundle_offer_title')}
             </h2>
             <p className="text-[20px] sm:text-[26px] font-bold text-[#F2F0E3] mt-1">
@@ -307,13 +307,36 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
         </div>
 
         {/* Bottom Cream Wave Backdrop behind the 3 Bundle Cards */}
-        <div className="relative max-w-[1440px] mx-auto px-6 lg:px-14 mt-4">
-          {/* Previous / Next Carousel Arrows */}
+        <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-14 mt-4">
+          {/* Mobile Rotation Controls */}
+          <div className="md:hidden flex items-center justify-center gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => rotateBundles('prev')}
+              aria-label="Previous bundle"
+              className="w-9 h-9 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] flex items-center justify-center shadow-md transition-colors cursor-pointer text-sm"
+            >
+              ←
+            </button>
+            <span className="text-xs font-semibold text-[#F2F0E3]/80 uppercase tracking-wider">
+              {t('cat_bundles', 'Bundles')}
+            </span>
+            <button
+              type="button"
+              onClick={() => rotateBundles('next')}
+              aria-label="Next bundle"
+              className="w-9 h-9 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] flex items-center justify-center shadow-md transition-colors cursor-pointer text-sm"
+            >
+              →
+            </button>
+          </div>
+
+          {/* Desktop Previous / Next Carousel Arrows */}
           <button
             type="button"
             onClick={() => rotateBundles('prev')}
             aria-label="Previous bundle"
-            className="absolute left-3 lg:left-8 bottom-[105px] z-30 w-8 h-8 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] flex items-center justify-center shadow-md transition-colors cursor-pointer"
+            className="hidden md:flex absolute left-3 lg:left-8 bottom-[105px] z-30 w-8 h-8 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] items-center justify-center shadow-md transition-colors cursor-pointer"
           >
             ←
           </button>
@@ -321,7 +344,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
             type="button"
             onClick={() => rotateBundles('next')}
             aria-label="Next bundle"
-            className="absolute right-3 lg:right-8 bottom-[105px] z-30 w-8 h-8 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] flex items-center justify-center shadow-md transition-colors cursor-pointer"
+            className="hidden md:flex absolute right-3 lg:right-8 bottom-[105px] z-30 w-8 h-8 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] items-center justify-center shadow-md transition-colors cursor-pointer"
           >
             →
           </button>
