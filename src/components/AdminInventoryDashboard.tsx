@@ -17,6 +17,7 @@ import {
   Clock,
   Truck,
   Undo2,
+  X,
 } from 'lucide-react';
 import {
   UserAccount,
@@ -555,6 +556,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
       }
 
       syncInventoryState(data.inventory, data.stats, data.movements, data.purchaseOrders);
+      await fetchInventory();
       setActionFeedback(
         data.message || `Added new product "${data.newItem?.name}" (${data.newItem?.sku}).`
       );
@@ -730,14 +732,14 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
             <button
               type="button"
               onClick={() => {
-                setIsAddProductOpen((prev) => !prev);
+                setIsAddProductOpen(true);
                 setNewProductErrors({});
               }}
               data-testid="toggle-add-product-btn"
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-xs font-bold transition-colors cursor-pointer shadow-xs"
             >
               <Plus className="w-4 h-4" />
-              <span>{isAddProductOpen ? 'Close Add Product' : 'Add New Product'}</span>
+              <span>Add New Product</span>
             </button>
 
             <button
@@ -869,373 +871,387 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
           </div>
         </div>
 
-        {/* Add New Product Form Panel (Admin Only) */}
+        {/* Add New Product Form Modal (Admin Only) */}
         {isAddProductOpen && (
           <div
-            data-testid="add-product-panel"
-            className="bg-white rounded-2xl p-6 border-2 border-[#384A22]/25 shadow-sm space-y-5"
+            data-testid="add-product-modal-backdrop"
+            onClick={() => setIsAddProductOpen(false)}
+            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#384A22]/10 pb-4">
-              <div>
-                <h2 className="text-lg font-bold text-[#384A22] flex items-center gap-2">
-                  <Package className="w-5 h-5 text-[#8B6D3B]" />
-                  <span>Add New Product to Catalog &amp; Inventory</span>
-                </h2>
-                <p className="text-xs text-[#384A22]/70 mt-0.5">
-                  Create a new SKU with pricing, unit cost, initial stock level, and reorder threshold.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  data-testid="autofill-sample-product-btn"
-                  onClick={() => {
-                    setNewProductForm({
-                      name: 'Artisan Roasted Cashews — Kampot Black Pepper (250g Jar)',
-                      sku: `KH-BP-${Math.floor(100 + Math.random() * 899)}J`,
-                      barcode: '',
-                      variantLabel: 'Kampot Black Pepper · 250g Glass Jar',
-                      category: 'Glass Jars (250g)',
-                      unitOfMeasure: '250g Glass Jar',
-                      price: '22.00',
-                      unitCost: '9.50',
-                      initialStock: '35',
-                      reorderThreshold: '15',
-                      image: '/assets/aistudio/product-chilli-lime-jar-250g.png',
-                    });
-                    setNewProductErrors({});
-                  }}
-                  className="px-3 py-1.5 rounded-lg bg-[#F2F0E3] hover:bg-[#E5E1CE] text-[#384A22] text-xs font-semibold cursor-pointer"
-                >
-                  Fill Sample Product
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsAddProductOpen(false)}
-                  className="px-3 py-1.5 rounded-lg border border-[#384A22]/20 text-[#384A22] text-xs font-semibold hover:bg-[#384A22]/10 cursor-pointer"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-
-            <form onSubmit={handleCreateNewProductSubmit} className="space-y-4" noValidate>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Product Name */}
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="new-prod-name"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Product Name *
-                  </label>
-                  <input
-                    id="new-prod-name"
-                    type="text"
-                    data-testid="new-product-name-input"
-                    value={newProductForm.name}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, name: e.target.value });
-                      if (newProductErrors.name) {
-                        setNewProductErrors({ ...newProductErrors, name: undefined });
-                      }
-                    }}
-                    placeholder="e.g. Artisan Roasted Cashews — Sea Salt Caramel (250g Jar)"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.name && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.name}</p>
-                  )}
-                </div>
-
-                {/* SKU */}
-                <div>
-                  <label
-                    htmlFor="new-prod-sku"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    SKU Code *
-                  </label>
-                  <input
-                    id="new-prod-sku"
-                    type="text"
-                    data-testid="new-product-sku-input"
-                    value={newProductForm.sku}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, sku: e.target.value.toUpperCase() });
-                      if (newProductErrors.sku) {
-                        setNewProductErrors({ ...newProductErrors, sku: undefined });
-                      }
-                    }}
-                    placeholder="e.g. KH-SC-250J"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-mono focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.sku && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.sku}</p>
-                  )}
-                </div>
-
-                {/* Barcode (Optional) */}
-                <div>
-                  <label
-                    htmlFor="new-prod-barcode"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    EAN Barcode (Optional)
-                  </label>
-                  <input
-                    id="new-prod-barcode"
-                    type="text"
-                    data-testid="new-product-barcode-input"
-                    value={newProductForm.barcode}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, barcode: e.target.value });
-                      if (newProductErrors.barcode) {
-                        setNewProductErrors({ ...newProductErrors, barcode: undefined });
-                      }
-                    }}
-                    placeholder="Auto-generated if blank"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-mono focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.barcode && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.barcode}</p>
-                  )}
-                </div>
-
-                {/* Category */}
-                <div>
-                  <label
-                    htmlFor="new-prod-category"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Category *
-                  </label>
-                  <select
-                    id="new-prod-category"
-                    data-testid="new-product-category-select"
-                    value={newProductForm.category}
-                    onChange={(e) => {
-                      const cat = e.target.value as InventoryCategory;
-                      const autoUom: UnitOfMeasure =
-                        cat === 'Single Pouches (100g)'
-                          ? '100g Pouch'
-                          : cat === 'Glass Jars (250g)'
-                          ? '250g Glass Jar'
-                          : 'Bundle Box';
-                      const autoImg =
-                        cat === 'Single Pouches (100g)'
-                          ? '/assets/aistudio/product-honey-butter-pouch-100g.png'
-                          : cat === 'Glass Jars (250g)'
-                          ? '/assets/aistudio/product-honey-butter-jar-250g.png'
-                          : '/assets/aistudio/bundle-complete-4pack.png';
-                      setNewProductForm({
-                        ...newProductForm,
-                        category: cat,
-                        unitOfMeasure: autoUom,
-                        image: autoImg,
-                      });
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
-                  >
-                    <option value="Single Pouches (100g)">Single Pouches (100g)</option>
-                    <option value="Glass Jars (250g)">Glass Jars (250g)</option>
-                    <option value="Value Bundles">Value Bundles</option>
-                  </select>
-                </div>
-
-                {/* Variant Label */}
-                <div>
-                  <label
-                    htmlFor="new-prod-variant"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Variant / Pack Label
-                  </label>
-                  <input
-                    id="new-prod-variant"
-                    type="text"
-                    data-testid="new-product-variant-input"
-                    value={newProductForm.variantLabel}
-                    onChange={(e) =>
-                      setNewProductForm({ ...newProductForm, variantLabel: e.target.value })
-                    }
-                    placeholder="e.g. Sea Salt Caramel · 250g Jar"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
-                  />
-                </div>
-
-                {/* Selling Price USD */}
-                <div>
-                  <label
-                    htmlFor="new-prod-price"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Selling Price (USD) *
-                  </label>
-                  <input
-                    id="new-prod-price"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    data-testid="new-product-price-input"
-                    value={newProductForm.price}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, price: e.target.value });
-                      if (newProductErrors.price) {
-                        setNewProductErrors({ ...newProductErrors, price: undefined });
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.price && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.price}</p>
-                  )}
-                </div>
-
-                {/* Unit Cost USD */}
-                <div>
-                  <label
-                    htmlFor="new-prod-cost"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Unit Cost (USD) *
-                  </label>
-                  <input
-                    id="new-prod-cost"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    data-testid="new-product-cost-input"
-                    value={newProductForm.unitCost}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, unitCost: e.target.value });
-                      if (newProductErrors.unitCost) {
-                        setNewProductErrors({ ...newProductErrors, unitCost: undefined });
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.unitCost && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.unitCost}</p>
-                  )}
-                </div>
-
-                {/* Initial Stock Quantity */}
-                <div>
-                  <label
-                    htmlFor="new-prod-stock"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Initial Stock Units *
-                  </label>
-                  <input
-                    id="new-prod-stock"
-                    type="number"
-                    step="1"
-                    min="0"
-                    data-testid="new-product-stock-input"
-                    value={newProductForm.initialStock}
-                    onChange={(e) => {
-                      setNewProductForm({ ...newProductForm, initialStock: e.target.value });
-                      if (newProductErrors.initialStock) {
-                        setNewProductErrors({ ...newProductErrors, initialStock: undefined });
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.initialStock && (
-                    <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.initialStock}</p>
-                  )}
-                </div>
-
-                {/* Reorder Threshold */}
-                <div>
-                  <label
-                    htmlFor="new-prod-threshold"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
-                  >
-                    Reorder Threshold *
-                  </label>
-                  <input
-                    id="new-prod-threshold"
-                    type="number"
-                    step="1"
-                    min="0"
-                    data-testid="new-product-threshold-input"
-                    value={newProductForm.reorderThreshold}
-                    onChange={(e) => {
-                      setNewProductForm({
-                        ...newProductForm,
-                        reorderThreshold: e.target.value,
-                      });
-                      if (newProductErrors.reorderThreshold) {
-                        setNewProductErrors({
-                          ...newProductErrors,
-                          reorderThreshold: undefined,
-                        });
-                      }
-                    }}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm tabular-nums focus:outline-none focus:border-[#384A22]"
-                  />
-                  {newProductErrors.reorderThreshold && (
-                    <p className="text-xs text-[#B83A2A] mt-1">
-                      {newProductErrors.reorderThreshold}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-product-modal-title"
+              data-testid="add-product-modal"
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-2xl bg-[#F2F0E3] rounded-3xl border border-[#384A22]/20 shadow-2xl overflow-hidden my-8"
+            >
+              {/* Modal Header */}
+              <div className="bg-[#384A22] text-[#F2F0E3] px-6 py-5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                    <Package className="w-5 h-5 text-[#9AB87A]" />
+                  </div>
+                  <div>
+                    <h2
+                      id="add-product-modal-title"
+                      className="text-lg font-bold text-[#F2F0E3]"
+                    >
+                      Add New Product
+                    </h2>
+                    <p className="text-xs text-[#F2F0E3]/75">
+                      Enter product details to save to catalog and refresh inventory immediately.
                     </p>
-                  )}
+                  </div>
                 </div>
 
-                {/* Product Image Preset / URL */}
-                <div className="sm:col-span-2">
-                  <label
-                    htmlFor="new-prod-image"
-                    className="block text-xs font-bold uppercase text-[#384A22]/80 mb-1"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    data-testid="autofill-sample-product-btn"
+                    onClick={() => {
+                      setNewProductForm({
+                        name: 'Artisan Roasted Cashews — Kampot Black Pepper (250g Jar)',
+                        sku: `KH-BP-${Math.floor(100 + Math.random() * 899)}J`,
+                        barcode: '',
+                        variantLabel: 'Kampot Black Pepper · 250g Glass Jar',
+                        category: 'Glass Jars (250g)',
+                        unitOfMeasure: '250g Glass Jar',
+                        price: '22.00',
+                        unitCost: '9.50',
+                        initialStock: '35',
+                        reorderThreshold: '15',
+                        image: '/assets/aistudio/product-chilli-lime-jar-250g.png',
+                      });
+                      setNewProductErrors({});
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-[#F2F0E3] text-xs font-semibold cursor-pointer"
                   >
-                    Product Packaging Image
-                  </label>
-                  <select
-                    id="new-prod-image"
-                    data-testid="new-product-image-select"
-                    value={newProductForm.image}
-                    onChange={(e) =>
-                      setNewProductForm({ ...newProductForm, image: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/45 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                    Fill Sample
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Close Add New Product modal"
+                    data-testid="close-add-product-modal-btn"
+                    onClick={() => setIsAddProductOpen(false)}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-[#F2F0E3] cursor-pointer"
                   >
-                    <option value="/assets/aistudio/product-honey-butter-jar-250g.png">
-                      250g Glass Jar — Golden Label
-                    </option>
-                    <option value="/assets/aistudio/product-chilli-lime-jar-250g.png">
-                      250g Glass Jar — Spice Red Label
-                    </option>
-                    <option value="/assets/aistudio/product-honey-butter-pouch-100g.png">
-                      100g Resealable Pouch — Golden Label
-                    </option>
-                    <option value="/assets/aistudio/product-chili-lime-pouch-100g.png">
-                      100g Resealable Pouch — Spice Red Label
-                    </option>
-                    <option value="/assets/aistudio/bundle-complete-4pack.png">
-                      Value Bundle — 4-Pack Collection
-                    </option>
-                    <option value="/assets/aistudio/bundle-jars-duo.png">
-                      Value Bundle — 250g Jar Duo
-                    </option>
-                  </select>
+                    <X className="w-4 h-4" />
+                  </button>
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-3">
-                <button
-                  type="submit"
-                  disabled={isCreatingProduct}
-                  data-testid="submit-new-product-btn"
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span>{isCreatingProduct ? 'Adding Product...' : 'Add Product to Inventory'}</span>
-                </button>
-              </div>
-            </form>
+              {/* Modal Form Body */}
+              <form
+                onSubmit={handleCreateNewProductSubmit}
+                data-testid="add-product-panel"
+                className="p-6 bg-white space-y-5"
+                noValidate
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* 1. Product Name */}
+                  <div className="sm:col-span-2">
+                    <label
+                      htmlFor="new-prod-name"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Product Name *
+                    </label>
+                    <input
+                      id="new-prod-name"
+                      type="text"
+                      required
+                      data-testid="new-product-name-input"
+                      value={newProductForm.name}
+                      onChange={(e) => {
+                        setNewProductForm({ ...newProductForm, name: e.target.value });
+                        if (newProductErrors.name) {
+                          setNewProductErrors({ ...newProductErrors, name: undefined });
+                        }
+                      }}
+                      placeholder="e.g. Artisan Roasted Cashews — Sea Salt Caramel (250g Jar)"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.name && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.name}</p>
+                    )}
+                  </div>
+
+                  {/* 2. Category */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-category"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Category *
+                    </label>
+                    <select
+                      id="new-prod-category"
+                      data-testid="new-product-category-select"
+                      value={newProductForm.category}
+                      onChange={(e) => {
+                        const cat = e.target.value as InventoryCategory;
+                        const autoUom: UnitOfMeasure =
+                          cat === 'Single Pouches (100g)'
+                            ? '100g Pouch'
+                            : cat === 'Glass Jars (250g)'
+                            ? '250g Glass Jar'
+                            : 'Bundle Box';
+                        const autoImg =
+                          cat === 'Single Pouches (100g)'
+                            ? '/assets/aistudio/product-honey-butter-pouch-100g.png'
+                            : cat === 'Glass Jars (250g)'
+                            ? '/assets/aistudio/product-honey-butter-jar-250g.png'
+                            : '/assets/aistudio/bundle-complete-4pack.png';
+                        setNewProductForm({
+                          ...newProductForm,
+                          category: cat,
+                          unitOfMeasure: autoUom,
+                          image: autoImg,
+                        });
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                    >
+                      <option value="Single Pouches (100g)">Single Pouches (100g)</option>
+                      <option value="Glass Jars (250g)">Glass Jars (250g)</option>
+                      <option value="Value Bundles">Value Bundles</option>
+                    </select>
+                  </div>
+
+                  {/* 3. SKU */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-sku"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      SKU *
+                    </label>
+                    <input
+                      id="new-prod-sku"
+                      type="text"
+                      required
+                      data-testid="new-product-sku-input"
+                      value={newProductForm.sku}
+                      onChange={(e) => {
+                        setNewProductForm({
+                          ...newProductForm,
+                          sku: e.target.value.toUpperCase(),
+                        });
+                        if (newProductErrors.sku) {
+                          setNewProductErrors({ ...newProductErrors, sku: undefined });
+                        }
+                      }}
+                      placeholder="e.g. KH-SC-250J"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-mono text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.sku && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.sku}</p>
+                    )}
+                  </div>
+
+                  {/* 4. Initial Stock Quantity */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-stock"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Initial Stock Quantity *
+                    </label>
+                    <input
+                      id="new-prod-stock"
+                      type="number"
+                      step="1"
+                      min="0"
+                      required
+                      data-testid="new-product-stock-input"
+                      value={newProductForm.initialStock}
+                      onChange={(e) => {
+                        setNewProductForm({ ...newProductForm, initialStock: e.target.value });
+                        if (newProductErrors.initialStock) {
+                          setNewProductErrors({ ...newProductErrors, initialStock: undefined });
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.initialStock && (
+                      <p className="text-xs text-[#B83A2A] mt-1">
+                        {newProductErrors.initialStock}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* 5. Price (USD) */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-price"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Price (USD) *
+                    </label>
+                    <input
+                      id="new-prod-price"
+                      type="number"
+                      step="0.01"
+                      min="0.01"
+                      required
+                      data-testid="new-product-price-input"
+                      value={newProductForm.price}
+                      onChange={(e) => {
+                        setNewProductForm({ ...newProductForm, price: e.target.value });
+                        if (newProductErrors.price) {
+                          setNewProductErrors({ ...newProductErrors, price: undefined });
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.price && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.price}</p>
+                    )}
+                  </div>
+
+                  {/* Unit Cost & Reorder Threshold */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-cost"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Unit Cost (USD)
+                    </label>
+                    <input
+                      id="new-prod-cost"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      data-testid="new-product-cost-input"
+                      value={newProductForm.unitCost}
+                      onChange={(e) => {
+                        setNewProductForm({ ...newProductForm, unitCost: e.target.value });
+                        if (newProductErrors.unitCost) {
+                          setNewProductErrors({ ...newProductErrors, unitCost: undefined });
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.unitCost && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{newProductErrors.unitCost}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="new-prod-threshold"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Reorder Threshold
+                    </label>
+                    <input
+                      id="new-prod-threshold"
+                      type="number"
+                      step="1"
+                      min="0"
+                      data-testid="new-product-threshold-input"
+                      value={newProductForm.reorderThreshold}
+                      onChange={(e) => {
+                        setNewProductForm({
+                          ...newProductForm,
+                          reorderThreshold: e.target.value,
+                        });
+                        if (newProductErrors.reorderThreshold) {
+                          setNewProductErrors({
+                            ...newProductErrors,
+                            reorderThreshold: undefined,
+                          });
+                        }
+                      }}
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm tabular-nums text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                    {newProductErrors.reorderThreshold && (
+                      <p className="text-xs text-[#B83A2A] mt-1">
+                        {newProductErrors.reorderThreshold}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Variant Label & Packaging Image */}
+                  <div>
+                    <label
+                      htmlFor="new-prod-variant"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Variant / Pack Label
+                    </label>
+                    <input
+                      id="new-prod-variant"
+                      type="text"
+                      data-testid="new-product-variant-input"
+                      value={newProductForm.variantLabel}
+                      onChange={(e) =>
+                        setNewProductForm({ ...newProductForm, variantLabel: e.target.value })
+                      }
+                      placeholder="e.g. Sea Salt Caramel · 250g Jar"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm text-[#384A22] focus:outline-none focus:border-[#384A22]"
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="new-prod-image"
+                      className="block text-xs font-bold uppercase text-[#384A22]/85 mb-1"
+                    >
+                      Packaging Image
+                    </label>
+                    <select
+                      id="new-prod-image"
+                      data-testid="new-product-image-select"
+                      value={newProductForm.image}
+                      onChange={(e) =>
+                        setNewProductForm({ ...newProductForm, image: e.target.value })
+                      }
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-[#F2F0E3]/50 border border-[#384A22]/20 text-sm font-medium text-[#384A22] focus:outline-none focus:border-[#384A22] cursor-pointer"
+                    >
+                      <option value="/assets/aistudio/product-honey-butter-jar-250g.png">
+                        250g Glass Jar — Golden Label
+                      </option>
+                      <option value="/assets/aistudio/product-chilli-lime-jar-250g.png">
+                        250g Glass Jar — Spice Red Label
+                      </option>
+                      <option value="/assets/aistudio/product-honey-butter-pouch-100g.png">
+                        100g Resealable Pouch — Golden Label
+                      </option>
+                      <option value="/assets/aistudio/product-chili-lime-pouch-100g.png">
+                        100g Resealable Pouch — Spice Red Label
+                      </option>
+                      <option value="/assets/aistudio/bundle-complete-4pack.png">
+                        Value Bundle — 4-Pack Collection
+                      </option>
+                      <option value="/assets/aistudio/bundle-jars-duo.png">
+                        Value Bundle — 250g Jar Duo
+                      </option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Modal Footer Actions */}
+                <div className="pt-4 border-t border-[#384A22]/10 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddProductOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-[#384A22]/25 text-[#384A22] text-xs font-bold uppercase tracking-wider hover:bg-[#384A22]/10 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingProduct}
+                    data-testid="submit-new-product-btn"
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer shadow-xs"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>{isCreatingProduct ? 'Saving Product...' : 'Save Product'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 
