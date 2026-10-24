@@ -23,6 +23,8 @@ import {
   hasAccountPermission,
   InventoryItem,
   isProductOutOfStock,
+  getSmartProductRecommendations,
+  RecommendedCatalogItem,
 } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
@@ -1273,6 +1275,9 @@ interface ProductDetailModalProps {
   onClose: () => void;
   onAddProductToCart: (product: Product, isAutoship?: boolean, variantLabel?: string, customPrice?: number) => void;
   onAddBundleToCart: (bundle: BundleItem) => void;
+  onSelectProduct?: (product: Product) => void;
+  onSelectBundle?: (bundle: BundleItem) => void;
+  recentlyViewedIds?: string[];
   inventory?: InventoryItem[];
 }
 
@@ -1282,13 +1287,279 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onClose,
   onAddProductToCart,
   onAddBundleToCart,
+  onSelectProduct,
+  onSelectBundle,
+  recentlyViewedIds = [],
   inventory = [],
 }) => {
   const { t, formatPrice } = useI18n();
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
   const [isAutoship, setIsAutoship] = useState(false);
+  const [activeRecTab, setActiveRecTab] = useState<'related' | 'you_may_like' | 'bought_together'>('related');
+  const modalContainerRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    setSelectedVariantIdx(0);
+    setActiveRecTab('related');
+    if (modalContainerRef.current) {
+      modalContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [product?.id, bundle?.id]);
 
   if (!product && !bundle) return null;
+
+  const activeVariant =
+    product && product.variants && product.variants.length > 0
+      ? product.variants[selectedVariantIdx] || product.variants[0]
+      : null;
+
+  const targetRecommendationId = bundle
+    ? bundle.id
+    : activeVariant?.id || product!.id;
+  const targetVariantLabel = bundle
+    ? undefined
+    : activeVariant?.label || product!.packageSize;
+
+  const recommendations = getSmartProductRecommendations(
+    targetRecommendationId,
+    inventory,
+    {
+      variantLabel: targetVariantLabel,
+      recentlyViewedIds,
+      maxResults: 3,
+    }
+  );
+
+  const handleViewRecommendedItem = (rec: RecommendedCatalogItem) => {
+    if (rec.itemType === 'bundle' && rec.bundleRef && onSelectBundle) {
+      onSelectBundle(rec.bundleRef);
+    } else if (rec.itemType === 'product' && rec.productRef && onSelectProduct) {
+      onSelectProduct(rec.productRef);
+    }
+  };
+
+  const handleAddRecommendedItemToCart = (rec: RecommendedCatalogItem) => {
+    if (!rec.inStock) return;
+    if (rec.itemType === 'bundle' && rec.bundleRef) {
+      onAddBundleToCart(rec.bundleRef);
+    } else if (rec.itemType === 'product' && rec.productRef) {
+      onAddProductToCart(rec.productRef, false, rec.packageSize, rec.price);
+    }
+  };
+
+  const displayedRecommendations =
+    activeRecTab === 'related'
+      ? recommendations.relatedProducts
+      : activeRecTab === 'you_may_like'
+      ? recommendations.youMayAlsoLike
+      : recommendations.frequentlyBoughtTogether;
+
+  const renderOutOfStockAlternativesCallout = () => {
+    if (!recommendations.targetOutOfStock || recommendations.alternativesForUnavailable.length === 0) {
+      return null;
+    }
+    const topAlt = recommendations.alternativesForUnavailable[0];
+    return (
+      <div
+        data-testid="out-of-stock-alternatives-banner"
+        className="mt-3 p-3.5 rounded-2xl bg-white border border-[#8B6D3B]/35 shadow-sm"
+      >
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#384A22]">
+            Available Alternative — In Stock Now
+          </span>
+          <span className="text-[11px] font-bold text-[#768E5C]">
+            {topAlt.stockQuantity} in stock
+          </span>
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-12 h-12 rounded-xl bg-[#384A22] p-1.5 shrink-0 flex items-center justify-center">
+              <SmartImage
+                src={topAlt.image}
+                alt={topAlt.name}
+                className="w-full h-full object-contain"
+                fallbackBg="transparent"
+              />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-[#384A22] truncate">{topAlt.name}</p>
+              <p className="text-[11px] text-[#384A22]/75 truncate">
+                {topAlt.reasonDescription} · <strong className="text-[#384A22]">{formatPrice(topAlt.price)}</strong>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            {(onSelectProduct || onSelectBundle) && (
+              <button
+                type="button"
+                onClick={() => handleViewRecommendedItem(topAlt)}
+                className="px-3 py-1.5 rounded-full border border-[#384A22]/25 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] text-[11px] font-bold transition-colors cursor-pointer"
+              >
+                View Option
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => handleAddRecommendedItemToCart(topAlt)}
+              className="px-3 py-1.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[11px] font-bold transition-colors cursor-pointer"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderRecommendationsSection = () => {
+    if (recommendations.relatedProducts.length === 0) return null;
+
+    return (
+      <div
+        data-testid="smart-recommendations-section"
+        className="mt-8 pt-6 border-t border-[#384A22]/15"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+          <div>
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#768E5C]">
+              {recommendations.targetOutOfStock
+                ? 'Recommended In-Stock Replacements'
+                : 'Curated For Your Taste'}
+            </span>
+            <h4 className="text-lg sm:text-xl font-extrabold text-[#384A22]">
+              {recommendations.targetOutOfStock
+                ? 'Available Alternatives & Related Products'
+                : activeRecTab === 'related'
+                ? 'Related Products'
+                : activeRecTab === 'you_may_like'
+                ? 'You May Also Like'
+                : 'Frequently Bought Together'}
+            </h4>
+          </div>
+
+          <div className="inline-flex items-center bg-white/80 rounded-full p-1 border border-[#384A22]/15 self-start sm:self-auto">
+            {[
+              { id: 'related', label: 'Related Products' },
+              { id: 'you_may_like', label: 'You May Also Like' },
+              { id: 'bought_together', label: 'Bought Together' },
+            ].map((tab) => {
+              const isTabActive = activeRecTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() =>
+                    setActiveRecTab(tab.id as 'related' | 'you_may_like' | 'bought_together')
+                  }
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-colors cursor-pointer whitespace-nowrap ${
+                    isTabActive
+                      ? 'bg-[#384A22] text-[#F2F0E3]'
+                      : 'text-[#384A22]/80 hover:text-[#384A22]'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {displayedRecommendations.map((rec) => (
+            <div
+              key={rec.id}
+              data-testid={`recommendation-card-${rec.id}`}
+              className="group bg-white rounded-2xl p-4 border border-[#384A22]/12 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
+            >
+              <div>
+                <div className="relative bg-[#384A22] rounded-xl p-3 h-36 flex items-center justify-center mb-3 overflow-hidden">
+                  <SmartImage
+                    src={rec.image}
+                    alt={rec.name}
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                    fallbackBg="transparent"
+                  />
+                  <span className="absolute top-2 left-2 px-2.5 py-0.5 rounded-md bg-[#F2F0E3]/95 text-[#384A22] text-[10px] font-extrabold uppercase tracking-wider shadow-sm">
+                    {rec.reasonTag}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 text-[11px] font-bold uppercase tracking-wider text-[#768E5C] mb-1">
+                  <span className="truncate">{rec.category}</span>
+                  <span className="text-[#8B6D3B] shrink-0">
+                    ★ {rec.rating.toFixed(2)} ({rec.reviewCount})
+                  </span>
+                </div>
+
+                <h5 className="text-sm font-extrabold text-[#384A22] leading-snug line-clamp-2 min-h-[2.5rem]">
+                  {rec.name}
+                </h5>
+                <p className="text-xs text-[#384A22]/70 mt-0.5 line-clamp-2">
+                  {rec.reasonDescription}
+                </p>
+              </div>
+
+              <div className="mt-3 pt-2.5 border-t border-[#384A22]/10">
+                <div className="flex items-center justify-between gap-2 mb-2.5">
+                  <div className="flex items-baseline gap-1.5 tabular-nums flex-wrap">
+                    <span className="text-base font-extrabold text-[#384A22]">
+                      {formatPrice(rec.price)}
+                    </span>
+                    {rec.originalPrice > rec.price && (
+                      <span className="text-xs text-[#8B6D3B] line-through">
+                        {formatPrice(rec.originalPrice)}
+                      </span>
+                    )}
+                    {rec.discountPercent > 0 && (
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8B6D3B]">
+                        (-{rec.discountPercent}%)
+                      </span>
+                    )}
+                  </div>
+                  <span
+                    className={`text-[11px] font-bold ${
+                      !rec.inStock || rec.stockQuantity < 10
+                        ? 'text-[#B83A2A]'
+                        : 'text-[#768E5C]'
+                    }`}
+                  >
+                    {rec.inStock
+                      ? rec.stockQuantity < 10
+                        ? `Only ${rec.stockQuantity} left`
+                        : `In Stock (${rec.stockQuantity})`
+                      : 'Out of Stock'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleViewRecommendedItem(rec)}
+                    className="py-2 px-3 rounded-full border border-[#384A22]/25 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    View Product
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!rec.inStock}
+                    onClick={() => handleAddRecommendedItemToCart(rec)}
+                    className={`py-2 px-3 rounded-full text-xs font-bold transition-colors ${
+                      rec.inStock
+                        ? 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
+                        : 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed'
+                    }`}
+                  >
+                    {rec.inStock ? 'Add to Cart' : 'Out of Stock'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   if (bundle) {
     const isBundleOutOfStock = isProductOutOfStock(inventory, bundle.id);
@@ -1298,7 +1569,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         onClick={onClose}
       >
         <div
-          className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-2xl w-full p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
+          ref={modalContainerRef}
+          className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-3xl w-full p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex justify-between items-start mb-4">
@@ -1335,9 +1607,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
             <div>
               {isBundleOutOfStock && (
-                <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mb-2">
-                  This product is currently Out of Stock.
-                </p>
+                <div className="mb-3">
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
+                    This product is currently Out of Stock.
+                  </p>
+                  {renderOutOfStockAlternativesCallout()}
+                </div>
               )}
               <p className="text-sm text-[#384A22]/85 leading-relaxed mb-4">{bundle.description}</p>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#384A22] mb-2">
@@ -1378,15 +1653,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </button>
             </div>
           </div>
+
+          {renderRecommendationsSection()}
         </div>
       </div>
     );
   }
-
-  const activeVariant =
-    product!.variants && product!.variants.length > 0
-      ? product!.variants[selectedVariantIdx] || product!.variants[0]
-      : null;
 
   const activePrice = activeVariant ? activeVariant.price : product!.price;
   const activeOrigPrice = activeVariant ? activeVariant.originalPrice : product!.originalPrice;
@@ -1402,6 +1674,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       onClick={onClose}
     >
       <div
+        ref={modalContainerRef}
         className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-3xl w-full p-6 sm:p-8 shadow-2xl overflow-y-auto max-h-[90vh]"
         onClick={(e) => e.stopPropagation()}
       >
@@ -1441,9 +1714,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
           <div className="md:col-span-7 space-y-4">
             {isSelectedProductOutOfStock && (
-              <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
-                This product is currently Out of Stock.
-              </p>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
+                  This product is currently Out of Stock.
+                </p>
+                {renderOutOfStockAlternativesCallout()}
+              </div>
             )}
             <p className="text-sm text-[#384A22]/85 leading-relaxed">{product!.description}</p>
 
@@ -1559,6 +1835,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
           </div>
         </div>
+
+        {renderRecommendationsSection()}
       </div>
     </div>
   );

@@ -62,6 +62,25 @@ export default function App() {
     'pistachio-kunafa-toast',
   ]);
 
+  // Customer browsing history for Smart Product Recommendations
+  const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
+
+  const handleSelectProduct = (product: Product) => {
+    setSelectedBundle(null);
+    setSelectedProduct(product);
+    setRecentlyViewedIds((prev) =>
+      [product.id, ...prev.filter((id) => id !== product.id)].slice(0, 8)
+    );
+  };
+
+  const handleSelectBundle = (bundle: BundleItem) => {
+    setSelectedProduct(null);
+    setSelectedBundle(bundle);
+    setRecentlyViewedIds((prev) =>
+      [bundle.id, ...prev.filter((id) => id !== bundle.id)].slice(0, 8)
+    );
+  };
+
   // Subtle toast banner state
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -228,10 +247,7 @@ export default function App() {
             <HeroAndBundleSection
               onNavigate={handleNavigate}
               onAddBundleToCart={handleAddBundleToCart}
-              onSelectBundleDetail={(bundle) => {
-                setSelectedProduct(null);
-                setSelectedBundle(bundle);
-              }}
+              onSelectBundleDetail={handleSelectBundle}
               onClaimOffer={() => setIsFirstOrderModalOpen(true)}
               inventory={inventory}
             />
@@ -239,10 +255,7 @@ export default function App() {
             <ComparisonAndProductsSection
               onNavigate={handleNavigate}
               onAddProductToCart={(product) => handleAddProductToCart(product)}
-              onSelectProduct={(product) => {
-                setSelectedBundle(null);
-                setSelectedProduct(product);
-              }}
+              onSelectProduct={handleSelectProduct}
               inventory={inventory}
             />
 
@@ -261,14 +274,8 @@ export default function App() {
             initialCategory={shopCategory}
             onAddProductToCart={(product) => handleAddProductToCart(product)}
             onAddBundleToCart={handleAddBundleToCart}
-            onSelectProduct={(product) => {
-              setSelectedBundle(null);
-              setSelectedProduct(product);
-            }}
-            onSelectBundle={(bundle) => {
-              setSelectedProduct(null);
-              setSelectedBundle(bundle);
-            }}
+            onSelectProduct={handleSelectProduct}
+            onSelectBundle={handleSelectBundle}
             inventory={inventory}
           />
         )}
@@ -339,10 +346,7 @@ export default function App() {
           setAccountModalRole(role);
           setIsAccountModalOpen(true);
         }}
-        onSelectProduct={(product) => {
-          setSelectedBundle(null);
-          setSelectedProduct(product);
-        }}
+        onSelectProduct={handleSelectProduct}
         onAddProductToCart={(product) => handleAddProductToCart(product)}
         inventory={inventory}
       />
@@ -401,6 +405,9 @@ export default function App() {
         }}
         onAddProductToCart={handleAddProductToCart}
         onAddBundleToCart={handleAddBundleToCart}
+        onSelectProduct={handleSelectProduct}
+        onSelectBundle={handleSelectBundle}
+        recentlyViewedIds={recentlyViewedIds}
         inventory={inventory}
       />
 

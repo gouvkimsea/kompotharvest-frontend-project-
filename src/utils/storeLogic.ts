@@ -1,3 +1,5 @@
+import { PRODUCTS, BUNDLES, type Product, type BundleItem } from '../data/botenzData';
+
 export interface CartItem {
   id: string;
   name: string;
@@ -2257,4 +2259,576 @@ export function createInventoryProduct(
     movement,
   };
 }
+
+/* ============================================================================
+ * SMART PRODUCT RECOMMENDATION ENGINE
+ * ========================================================================== */
+
+export type RecommendationReasonTag =
+  | 'In-Stock Alternative'
+  | 'Same Category'
+  | 'Matching Flavor'
+  | 'Matching Package Size'
+  | 'Value Bundle Upgrade'
+  | 'Similar Price Range'
+  | 'Bestseller'
+  | 'Based on Your Browsing';
+
+export interface RecommendedCatalogItem {
+  id: string;
+  itemType: 'product' | 'bundle';
+  name: string;
+  subtitle: string;
+  category: InventoryCategory;
+  storeCategory: 'powders' | 'bundles';
+  brand: string;
+  flavor?: 'Honey Butter' | 'Chili Lime';
+  packageSize?: '100g Pouch' | '250g Jar' | 'Bundle Box';
+  tags: string[];
+  price: number;
+  originalPrice: number;
+  discountPercent: number;
+  rating: number;
+  reviewCount: number;
+  image: string;
+  stockQuantity: number;
+  reorderThreshold: number;
+  inStock: boolean;
+  availabilityLabel: string;
+  isOutOfStockAlternative: boolean;
+  reasonTag: RecommendationReasonTag;
+  reasonDescription: string;
+  score: number;
+  productRef?: Product;
+  bundleRef?: BundleItem;
+}
+
+export interface SmartRecommendationsOptions {
+  variantLabel?: string;
+  recentlyViewedIds?: string[];
+  maxResults?: number;
+  includeOutOfStockFallback?: boolean;
+}
+
+export interface SmartRecommendationsResult {
+  targetId: string;
+  targetName: string;
+  targetOutOfStock: boolean;
+  alternativesForUnavailable: RecommendedCatalogItem[];
+  relatedProducts: RecommendedCatalogItem[];
+  frequentlyBoughtTogether: RecommendedCatalogItem[];
+  youMayAlsoLike: RecommendedCatalogItem[];
+}
+
+function buildUnifiedCatalogCandidates(
+  inventory: InventoryItem[]
+): Omit<
+  RecommendedCatalogItem,
+  'isOutOfStockAlternative' | 'reasonTag' | 'reasonDescription' | 'score'
+>[] {
+  const safeInventory =
+    Array.isArray(inventory) && inventory.length > 0
+      ? inventory
+      : createInitialInventory();
+
+  const catalogMap = new Map<
+    string,
+    Omit<
+      RecommendedCatalogItem,
+      'isOutOfStockAlternative' | 'reasonTag' | 'reasonDescription' | 'score'
+    >
+  >();
+
+  // 1. Standard Individual Products synced with live inventory
+  for (const prod of PRODUCTS) {
+    const invRecord = safeInventory.find((i) => i.id === prod.id);
+    const livePrice = invRecord ? Number(invRecord.price) : prod.price;
+    const origPrice = Math.max(prod.originalPrice, livePrice);
+    const discountPercent =
+      origPrice > livePrice
+        ? Math.round(((origPrice - livePrice) / origPrice) * 100)
+        : 0;
+    const stockQty = getProductStockQuantity(safeInventory, prod.id);
+    const reorderThreshold = invRecord ? invRecord.reorderThreshold : 15;
+    const invCategory: InventoryCategory =
+      invRecord?.category ||
+      (prod.packageSize === '250g Jar'
+        ? 'Glass Jars (250g)'
+        : 'Single Pouches (100g)');
+
+    const tags = [
+      'kampot-harvest',
+      'artisan-cashews',
+      'high-protein',
+      'no-refined-sugar',
+      prod.flavor.toLowerCase().replace(/\s+/g, '-'),
+      prod.packageSize === '250g Jar' ? 'glass-jar' : 'resealable-pouch',
+      prod.packageSize === '250g Jar' ? '250g' : '100g',
+    ];
+
+    const syncedProduct: Product = {
+      ...prod,
+      price: livePrice,
+      image: invRecord?.image || prod.image,
+    };
+
+    catalogMap.set(prod.id, {
+      id: prod.id,
+      itemType: 'product',
+      name: `${prod.name} — ${prod.flavor}`,
+      subtitle: `${prod.packageSize} · ${prod.flavor}`,
+      category: invCategory,
+      storeCategory: 'powders',
+      brand: 'Kampot Harvest Co.',
+      flavor: prod.flavor,
+      packageSize: prod.packageSize,
+      tags,
+      price: livePrice,
+      originalPrice: origPrice,
+      discountPercent,
+      rating: prod.rating,
+      reviewCount: prod.reviewCount,
+      image: invRecord?.image || prod.image,
+      stockQuantity: stockQty,
+      reorderThreshold,
+      inStock: stockQty > 0,
+      availabilityLabel: getProductAvailabilityLabel(safeInventory, prod.id),
+      productRef: syncedProduct,
+    });
+  }
+
+  // 2. Standard Value Bundles synced with live inventory
+  for (const bnd of BUNDLES) {
+    const invRecord = safeInventory.find((i) => i.id === bnd.id);
+    const livePrice = invRecord ? Number(invRecord.price) : bnd.price;
+    const origPrice = Math.max(bnd.originalPrice, livePrice);
+    const discountPercent =
+      origPrice > livePrice
+        ? Math.round(((origPrice - livePrice) / origPrice) * 100)
+        : 25;
+    const stockQty = getProductStockQuantity(safeInventory, bnd.id);
+    const reorderThreshold = invRecord ? invRecord.reorderThreshold : 10;
+
+    const includesJar = bnd.includedItems.some((line) => line.includes('250g Jar'));
+    const includesPouch = bnd.includedItems.some((line) => line.includes('100g Pouch'));
+
+    const tags = [
+      'kampot-harvest',
+      'artisan-cashews',
+      'value-bundle',
+      'gift-set',
+      'honey-butter',
+      'chili-lime',
+      ...(includesJar ? ['glass-jar', '250g'] : []),
+      ...(includesPouch ? ['resealable-pouch', '100g'] : []),
+    ];
+
+    const reviewCountMap: Record<string, number> = {
+      'bundle-complete': 512,
+      'bundle-nut-lovers': 389,
+      'bundle-best-seller': 446,
+    };
+
+    const syncedBundle: BundleItem = {
+      ...bnd,
+      price: livePrice,
+      image: invRecord?.image || bnd.image,
+    };
+
+    catalogMap.set(bnd.id, {
+      id: bnd.id,
+      itemType: 'bundle',
+      name: bnd.name,
+      subtitle: invRecord?.variantLabel || '25% OFF Tasting Bundle',
+      category: 'Value Bundles',
+      storeCategory: 'bundles',
+      brand: 'Kampot Harvest Co.',
+      packageSize: 'Bundle Box',
+      tags,
+      price: livePrice,
+      originalPrice: origPrice,
+      discountPercent,
+      rating: bnd.rating,
+      reviewCount: reviewCountMap[bnd.id] || 310,
+      image: invRecord?.image || bnd.image,
+      stockQuantity: stockQty,
+      reorderThreshold,
+      inStock: stockQty > 0,
+      availabilityLabel: getProductAvailabilityLabel(safeInventory, bnd.id),
+      bundleRef: syncedBundle,
+    });
+  }
+
+  // 3. Custom Admin-Created Inventory Products (dynamically added at runtime)
+  for (const inv of safeInventory) {
+    if (catalogMap.has(inv.id)) continue;
+
+    const stockQty = getProductStockQuantity(safeInventory, inv.id);
+    const isBundle = inv.category === 'Value Bundles';
+    const inferredFlavor: 'Honey Butter' | 'Chili Lime' =
+      inv.name.toLowerCase().includes('chili') ||
+      inv.name.toLowerCase().includes('lime') ||
+      inv.name.toLowerCase().includes('pepper')
+        ? 'Chili Lime'
+        : 'Honey Butter';
+    const inferredSize: '100g Pouch' | '250g Jar' =
+      inv.category === 'Glass Jars (250g)' ? '250g Jar' : '100g Pouch';
+
+    const tags = [
+      'kampot-harvest',
+      'artisan-cashews',
+      inferredFlavor.toLowerCase().replace(/\s+/g, '-'),
+      isBundle
+        ? 'value-bundle'
+        : inferredSize === '250g Jar'
+        ? 'glass-jar'
+        : 'resealable-pouch',
+    ];
+
+    if (isBundle) {
+      const customBundle: BundleItem = {
+        id: inv.id,
+        name: inv.name,
+        price: inv.price,
+        originalPrice: Number((inv.price * 1.25).toFixed(2)),
+        rating: 4.9,
+        image: inv.image,
+        description: `${inv.name} (${inv.variantLabel}) — Small-batch Kampot Harvest Co. specialty bundle.`,
+        includedItems: [inv.variantLabel || inv.name],
+      };
+
+      catalogMap.set(inv.id, {
+        id: inv.id,
+        itemType: 'bundle',
+        name: inv.name,
+        subtitle: inv.variantLabel,
+        category: inv.category,
+        storeCategory: 'bundles',
+        brand: 'Kampot Harvest Co.',
+        packageSize: 'Bundle Box',
+        tags,
+        price: inv.price,
+        originalPrice: customBundle.originalPrice,
+        discountPercent: 20,
+        rating: 4.9,
+        reviewCount: 128,
+        image: inv.image,
+        stockQuantity: stockQty,
+        reorderThreshold: inv.reorderThreshold,
+        inStock: stockQty > 0,
+        availabilityLabel: getProductAvailabilityLabel(safeInventory, inv.id),
+        bundleRef: customBundle,
+      });
+    } else {
+      const customProduct: Product = {
+        id: inv.id,
+        name: inv.name,
+        flavor: inferredFlavor,
+        packageSize: inferredSize,
+        slug: inv.id,
+        category: 'powders',
+        price: inv.price,
+        originalPrice: inv.price,
+        rating: 4.9,
+        reviewCount: 145,
+        image: inv.image,
+        shortDesc: `${inferredFlavor} · ${inferredSize} · USD ${inv.price}`,
+        description: `${inv.name} (${inv.variantLabel}) — Freshly roasted in small batches at Kampot Harvest Co.`,
+        hasVariants: false,
+        nutrition: {
+          servingSize: '30g (Approx. 18 cashews)',
+          calories: 162,
+          protein: '5.6g',
+          fat: '12.2g',
+          carbs: '8.0g',
+          sugar: '2.5g',
+        },
+        ingredients: 'Whole Kampot Cashews, Natural Artisanal Seasoning, Sea Salt.',
+        accentColor: inferredFlavor === 'Chili Lime' ? '#C93B2B' : '#D49B35',
+      };
+
+      catalogMap.set(inv.id, {
+        id: inv.id,
+        itemType: 'product',
+        name: inv.name,
+        subtitle: inv.variantLabel,
+        category: inv.category,
+        storeCategory: 'powders',
+        brand: 'Kampot Harvest Co.',
+        flavor: inferredFlavor,
+        packageSize: inferredSize,
+        tags,
+        price: inv.price,
+        originalPrice: inv.price,
+        discountPercent: 0,
+        rating: 4.9,
+        reviewCount: 145,
+        image: inv.image,
+        stockQuantity: stockQty,
+        reorderThreshold: inv.reorderThreshold,
+        inStock: stockQty > 0,
+        availabilityLabel: getProductAvailabilityLabel(safeInventory, inv.id),
+        productRef: customProduct,
+      });
+    }
+  }
+
+  return Array.from(catalogMap.values());
+}
+
+export function getSmartProductRecommendations(
+  targetId: string,
+  inventory: InventoryItem[] = createInitialInventory(),
+  options?: SmartRecommendationsOptions
+): SmartRecommendationsResult {
+  const safeInventory =
+    Array.isArray(inventory) && inventory.length > 0
+      ? inventory
+      : createInitialInventory();
+
+  const maxResults = Math.max(1, options?.maxResults ?? 4);
+  const rawCleanedId = (targetId || '').trim();
+  let resolvedTargetId = resolveInventoryItemId(rawCleanedId);
+
+  if (options?.variantLabel) {
+    const isHoney = resolvedTargetId.includes('honey-butter');
+    const isChili =
+      resolvedTargetId.includes('chili-lime') ||
+      resolvedTargetId.includes('chilli-lime');
+    if (isHoney && options.variantLabel.includes('250g')) {
+      resolvedTargetId = 'honey-butter-250g-jar';
+    } else if (isHoney && options.variantLabel.includes('100g')) {
+      resolvedTargetId = 'honey-butter-100g-pouch';
+    } else if (isChili && options.variantLabel.includes('250g')) {
+      resolvedTargetId = 'chilli-lime-250g-jar';
+    } else if (isChili && options.variantLabel.includes('100g')) {
+      resolvedTargetId = 'chili-lime-100g-pouch';
+    }
+  }
+
+  const allCatalog = buildUnifiedCatalogCandidates(safeInventory);
+  const targetItem =
+    allCatalog.find(
+      (c) =>
+        c.id === resolvedTargetId ||
+        c.id === rawCleanedId ||
+        c.productRef?.slug === rawCleanedId
+    ) || null;
+
+  const targetOutOfStock = targetItem
+    ? !targetItem.inStock
+    : isProductOutOfStock(safeInventory, resolvedTargetId, options?.variantLabel);
+
+  // Collect browsing history attributes to personalize without inventing fake data
+  const recentlyViewedSet = new Set(
+    (options?.recentlyViewedIds || [])
+      .map((id) => resolveInventoryItemId(id))
+      .filter((id) => id && id !== resolvedTargetId && id !== rawCleanedId)
+  );
+  const viewedFlavors = new Set<string>();
+  const viewedCategories = new Set<string>();
+  for (const viewedId of recentlyViewedSet) {
+    const viewedObj = allCatalog.find((c) => c.id === viewedId);
+    if (viewedObj?.flavor) viewedFlavors.add(viewedObj.flavor);
+    if (viewedObj?.category) viewedCategories.add(viewedObj.category);
+  }
+
+  // Rule: Never display the current product as its own recommendation
+  const nonSelfCandidates = allCatalog.filter(
+    (c) => c.id !== resolvedTargetId && c.id !== rawCleanedId
+  );
+
+  // Rule: Exclude unavailable products from primary recommendations
+  const inStockCandidates = nonSelfCandidates.filter((c) => c.inStock);
+  const outOfStockCandidates = nonSelfCandidates.filter((c) => !c.inStock);
+
+  const activePool =
+    inStockCandidates.length > 0
+      ? inStockCandidates.map((c) => ({ ...c, isOutOfStockAlternative: false }))
+      : options?.includeOutOfStockFallback
+      ? outOfStockCandidates.map((c) => ({ ...c, isOutOfStockAlternative: true }))
+      : [];
+
+  // Score each candidate according to the 4-tier priority order:
+  // 1. Similar products in the same category
+  // 2. Products with matching tags, brands, flavors, or attributes (+ browsing behavior)
+  // 3. Products within a similar price range
+  // 4. Bestsellers or popular products as fallback options
+  const scoredCandidates: RecommendedCatalogItem[] = activePool.map((cand) => {
+    let score = 0;
+    let reasonTag: RecommendationReasonTag = 'Bestseller';
+    let reasonDescription = `Popular choice (${cand.rating.toFixed(2)}★ · ${cand.reviewCount} reviews)`;
+
+    const sameExactCategory =
+      targetItem !== null && cand.category === targetItem.category;
+    const sameStoreCategory =
+      targetItem !== null && cand.storeCategory === targetItem.storeCategory;
+    const sameFlavor =
+      targetItem?.flavor !== undefined &&
+      cand.flavor !== undefined &&
+      cand.flavor === targetItem.flavor;
+    const samePackageSize =
+      targetItem?.packageSize !== undefined &&
+      cand.packageSize !== undefined &&
+      cand.packageSize === targetItem.packageSize;
+
+    const sharedTagsCount = targetItem
+      ? cand.tags.filter((t) => targetItem.tags.includes(t)).length
+      : 0;
+
+    const priceDiff = targetItem
+      ? Math.abs(cand.price - targetItem.price)
+      : Math.abs(cand.price - 20);
+    const similarPriceRange = priceDiff <= 10;
+
+    // Tier 1: Same Category (Highest base priority)
+    if (sameExactCategory) {
+      score += 400;
+    } else if (sameStoreCategory) {
+      score += 260;
+    }
+
+    // Tier 2: Matching Flavor, Package Size, Tags, Brand & Browsing Behavior
+    if (sameFlavor) {
+      score += 240;
+    }
+    if (samePackageSize) {
+      score += 140;
+    }
+    score += sharedTagsCount * 25;
+
+    if (cand.brand === (targetItem?.brand || 'Kampot Harvest Co.')) {
+      score += 20;
+    }
+
+    if (recentlyViewedSet.has(cand.id)) {
+      score += 45;
+    } else if (cand.flavor && viewedFlavors.has(cand.flavor)) {
+      score += 30;
+    } else if (viewedCategories.has(cand.category)) {
+      score += 20;
+    }
+
+    // If current product is Out of Stock, strongly prioritize direct in-stock replacements
+    // (same flavor in another size, or same size in another flavor, or bundle containing that item)
+    if (targetOutOfStock && cand.inStock) {
+      if (sameFlavor) {
+        score += 350;
+      } else if (sameExactCategory) {
+        score += 220;
+      } else if (
+        targetItem?.flavor &&
+        cand.tags.includes(targetItem.flavor.toLowerCase().replace(/\s+/g, '-'))
+      ) {
+        score += 180;
+      }
+    }
+
+    // Tier 3: Similar Price Range
+    if (similarPriceRange) {
+      score += Math.max(20, 110 - priceDiff * 8);
+    } else {
+      score += Math.max(0, 40 - priceDiff);
+    }
+
+    // Tier 4: Bestseller / Popularity & Rating Fallback
+    score += Math.round(cand.rating * 10) + Math.min(60, Math.round(cand.reviewCount / 10));
+
+    // Assign human-readable reason tag & description
+    if (targetOutOfStock && cand.inStock && (sameFlavor || sameExactCategory)) {
+      reasonTag = 'In-Stock Alternative';
+      reasonDescription = sameFlavor
+        ? `Available now in ${cand.packageSize} — same ${cand.flavor} flavor`
+        : `In-stock ${cand.category.toLowerCase()} ready to ship`;
+    } else if (sameExactCategory && samePackageSize) {
+      reasonTag = 'Same Category';
+      reasonDescription = `Sister ${cand.packageSize} in our ${cand.category} collection`;
+    } else if (sameFlavor) {
+      reasonTag = 'Matching Flavor';
+      reasonDescription = `More of our signature ${cand.flavor} roast in ${cand.packageSize}`;
+    } else if (sameExactCategory) {
+      reasonTag = 'Same Category';
+      reasonDescription = `Popular pick from ${cand.category}`;
+    } else if (cand.itemType === 'bundle' && targetItem?.itemType === 'product') {
+      reasonTag = 'Value Bundle Upgrade';
+      reasonDescription = `Save ${cand.discountPercent}% with this curated bundle`;
+    } else if (recentlyViewedSet.has(cand.id) || (cand.flavor && viewedFlavors.has(cand.flavor))) {
+      reasonTag = 'Based on Your Browsing';
+      reasonDescription = `Matches your recent interest in ${cand.flavor || cand.category}`;
+    } else if (similarPriceRange) {
+      reasonTag = 'Similar Price Range';
+      reasonDescription = `Great option around ${formatUSD(cand.price)}`;
+    } else {
+      reasonTag = 'Bestseller';
+      reasonDescription = `Customer favorite (${cand.rating.toFixed(2)}★ rating)`;
+    }
+
+    return {
+      ...cand,
+      reasonTag,
+      reasonDescription,
+      score,
+    };
+  });
+
+  // Sort strictly by descending score, then rating, then reviewCount
+  const relatedProducts = [...scoredCandidates]
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      if (b.rating !== a.rating) return b.rating - a.rating;
+      return b.reviewCount - a.reviewCount;
+    })
+    .slice(0, maxResults);
+
+  // Alternatives specifically for out-of-stock products
+  const alternativesForUnavailable = targetOutOfStock
+    ? relatedProducts
+        .filter((c) => c.inStock)
+        .map((c) => ({
+          ...c,
+          reasonTag: 'In-Stock Alternative' as RecommendationReasonTag,
+        }))
+        .slice(0, 3)
+    : [];
+
+  // Frequently Bought Together: Complementary pairings (opposite flavor or value bundle)
+  const frequentlyBoughtTogether = [...scoredCandidates]
+    .sort((a, b) => {
+      let compA = a.score;
+      let compB = b.score;
+      if (targetItem?.itemType === 'product') {
+        // Boost complementary flavor or bundle upgrade
+        if (a.flavor && targetItem.flavor && a.flavor !== targetItem.flavor) compA += 220;
+        if (b.flavor && targetItem.flavor && b.flavor !== targetItem.flavor) compB += 220;
+        if (a.itemType === 'bundle') compA += 200;
+        if (b.itemType === 'bundle') compB += 200;
+      } else {
+        // Viewing a bundle -> boost individual jars/pouches
+        if (a.itemType === 'product') compA += 220;
+        if (b.itemType === 'product') compB += 220;
+      }
+      return compB - compA;
+    })
+    .slice(0, 2);
+
+  // You May Also Like: Bestsellers & complementary catalog items
+  const youMayAlsoLike = [...scoredCandidates]
+    .sort((a, b) => {
+      const popA = a.reviewCount + a.rating * 100 + (recentlyViewedSet.has(a.id) ? 150 : 0);
+      const popB = b.reviewCount + b.rating * 100 + (recentlyViewedSet.has(b.id) ? 150 : 0);
+      return popB - popA;
+    })
+    .slice(0, maxResults);
+
+  return {
+    targetId: resolvedTargetId,
+    targetName: targetItem?.name || rawCleanedId,
+    targetOutOfStock,
+    alternativesForUnavailable,
+    relatedProducts,
+    frequentlyBoughtTogether,
+    youMayAlsoLike,
+  };
+}
+
 

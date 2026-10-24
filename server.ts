@@ -33,6 +33,7 @@ import {
   cancelPurchaseOrder,
   createInventoryProduct,
   CreateInventoryProductInput,
+  getSmartProductRecommendations,
 } from './src/utils/storeLogic.ts';
 
 dotenv.config();
@@ -253,6 +254,27 @@ app.get('/api/bundles', (req: Request, res: Response) => {
   res.json({
     count: BUNDLES.length,
     bundles: BUNDLES,
+  });
+});
+
+// Smart Product Recommendations endpoint
+app.get('/api/recommendations/:id', (req: Request, res: Response) => {
+  const { variant, history, limit } = req.query;
+  const recentlyViewedIds =
+    typeof history === 'string' && history.trim().length > 0
+      ? history.split(',').map((s) => s.trim())
+      : [];
+  const maxResults = limit ? Math.max(1, Math.min(12, Number(limit))) : 4;
+
+  const result = getSmartProductRecommendations(req.params.id, inventoryItems, {
+    variantLabel: typeof variant === 'string' ? variant : undefined,
+    recentlyViewedIds,
+    maxResults,
+  });
+
+  res.json({
+    success: true,
+    ...result,
   });
 });
 

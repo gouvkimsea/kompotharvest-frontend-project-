@@ -37,6 +37,7 @@ import {
   receivePurchaseOrderDelivery,
   validateNewInventoryProduct,
   createInventoryProduct,
+  getSmartProductRecommendations,
 } from './storeLogic';
 import { PRODUCTS } from '../data/botenzData';
 
@@ -742,3 +743,66 @@ test('createInventoryProduct allows admins to add new products, prevents duplica
   assert.equal(created.movement?.quantityDelta, 35);
   assert.equal(created.movement?.type, 'restock');
 });
+
+test('getSmartProductRecommendations enforces self-exclusion, excludes out-of-stock items, and prioritizes alternatives and dynamic inventory updates', () => {
+  const initialInv = createInitialInventory();
+
+  // 1. In-stock product: Honey Butter 250g Jar ('honey-butter-250g-jar')
+  const hbJarRecs = getSmartProductRecommendations('honey-butter-250g-jar', initialInv, {
+    maxResults: 5,
+  });
+  assert.equal(hbJarRecs.targetOutOfStock, false);
+  assert.equal(hbJarRecs.alternativesForUnavailable.length, 0);
+  // Never recommends itself
+  assert.ok(hbJarRecs.relatedProducts.every((r) => r.id !== 'honey-butter-250g-jar'));
+  assert.ok(hbJarRecs.youMayAlsoLike.every((r) => r.id !== 'honey-butter-250g-jar'));
+  assert.ok(hbJarRecs.frequentlyBoughtTogether.every((r) => r.id !== 'honey-butter-250g-jar'));
+  // Excludes out-of-stock items ('chili-lime-100g-pouch' and 'bundle-nut-lovers')
+  assert.ok(hbJarRecs.relatedProducts.every((r) => r.inStock && r.stockQuantity > 0));
+  assert.ok(hbJarRecs.relatedProducts.every((r) => r.id !== 'chili-lime-100g-pouch'));
+  assert.ok(hbJarRecs.relatedProducts.every((r) => r.id !== 'bundle-nut-lovers'));
+  // Prioritizes same category ('chilli-lime-250g-jar' is also in 'Glass Jars (250g)' at $20) or matching flavor ('honey-butter-100g-pouch')
+  const topIds = hbJarRecs.relatedProducts.slice(0, 2).map((r) => r.id);
+  assert.ok(topIds.includes('chilli-lime-250g-jar') || topIds.includes('honey-butter-100g-pouch'));
+
+  // 2. Out-of-stock product: Chili Lime 100g Pouch ('chili-lime-100g-pouch')
+  const clPouchRecs = getSmartProductRecommendations('chili-lime-100g-pouch', initialInv, {
+    maxResults: 4,
+  });
+  assert.equal(clPouchRecs.targetOutOfStock, true);
+  assert.ok(clPouchRecs.alternativesForUnavailable.length > 0);
+  // Top alternative #1 is Same Category + Same Package Size + Same Price ('honey-butter-100g-pouch'), followed by #2 Matching Flavor ('chilli-lime-250g-jar')
+  assert.equal(clPouchRecs.alternativesForUnavailable[0].id, 'honey-butter-100g-pouch');
+  assert.equal(clPouchRecs.alternativesForUnavailable[1].id, 'chilli-lime-250g-jar');
+  assert.equal(clPouchRecs.alternativesForUnavailable[0].reasonTag, 'In-Stock Alternative');
+  assert.equal(clPouchRecs.alternativesForUnavailable[0].inStock, true);
+
+  // 3. Out-of-stock bundle: Artisan 250g Jar Duo ('bundle-nut-lovers')
+  const bundleRecs = getSmartProductRecommendations('bundle-nut-lovers', initialInv, {
+    maxResults: 4,
+  });
+  assert.equal(bundleRecs.targetOutOfStock, true);
+  assert.ok(bundleRecs.alternativesForUnavailable.length > 0);
+  // Top alternatives for an out-of-stock bundle should be the in-stock Value Bundles ('bundle-complete', 'bundle-best-seller')
+  assert.equal(bundleRecs.alternativesForUnavailable[0].category, 'Value Bundles');
+  assert.equal(bundleRecs.alternativesForUnavailable[0].inStock, true);
+
+  // 4. Dynamic inventory update: Restock 'chili-lime-100g-pouch' and verify it immediately appears as top recommendation for 'honey-butter-100g-pouch'
+  const restocked = adjustInventoryStock(
+    initialInv,
+    'chili-lime-100g-pouch',
+    40,
+    'restock',
+    'Fresh roast batch'
+  );
+  assert.equal(restocked.success, true);
+
+  const hbPouchRecsAfterRestock = getSmartProductRecommendations(
+    'honey-butter-100g-pouch',
+    restocked.updatedInventory,
+    { maxResults: 4 }
+  );
+  // Now 'chili-lime-100g-pouch' is in stock and shares exact category ('Single Pouches (100g)'), package size ('100g Pouch'), and price ($10)
+  assert.ok(hbPouchRecsAfterRestock.relatedProducts.some((r) => r.id === 'chili-lime-100g-pouch'));
+});
+
