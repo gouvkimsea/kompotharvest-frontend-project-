@@ -13,6 +13,8 @@ interface NavbarProps {
   cartTotal: number;
   onOpenCart: () => void;
   onOpenDiscountModal: () => void;
+  currentUserName?: string | null;
+  onOpenAccountModal?: () => void;
 }
 
 export const BotenzLogo: React.FC<{ variant?: 'green' | 'white'; className?: string }> = ({
@@ -56,6 +58,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   cartTotal,
   onOpenCart,
   onOpenDiscountModal,
+  currentUserName,
+  onOpenAccountModal,
 }) => {
   const { language, setLanguage, t, formatPrice } = useI18n();
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);
@@ -255,6 +259,27 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
             )}
           </div>
+
+          {/* Account / Sign In Button */}
+          {onOpenAccountModal && (
+            <button
+              type="button"
+              data-testid="nav-account-btn"
+              onClick={onOpenAccountModal}
+              aria-label={
+                currentUserName
+                  ? `Account (${currentUserName})`
+                  : t('footer_account', 'Account')
+              }
+              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22]/10 text-[13px] font-bold transition-colors cursor-pointer whitespace-nowrap h-[40px]"
+            >
+              <span>
+                {currentUserName
+                  ? currentUserName.split(' ')[0]
+                  : t('footer_account', 'Account')}
+              </span>
+            </button>
+          )}
 
           {/* Primary Cart Action */}
           <button
@@ -683,10 +708,24 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={() => handleNavClick('recipes')}
-              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22]"
+              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
             >
               {t('nav_recipes')}
             </button>
+            {onOpenAccountModal && (
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenAccountModal();
+                }}
+                className="block w-full text-left py-2.5 text-base font-bold text-[#8B6D3B]"
+              >
+                {currentUserName
+                  ? `${t('footer_account', 'Account')} (${currentUserName})`
+                  : t('footer_account', 'Account')}
+              </button>
+            )}
           </div>
         </div>
       )}

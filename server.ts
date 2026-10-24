@@ -2,10 +2,20 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
+import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import { PRODUCTS, BUNDLES, RECIPES, CUSTOMER_REVIEWS } from './src/data/botenzData.ts';
-import { calculateCartSummary, CartItem } from './src/utils/storeLogic.ts';
+import {
+  calculateCartSummary,
+  CartItem,
+  lookupOrderStatus,
+  TrackedOrder,
+  UserAccount,
+  AccountRegistrationInput,
+  createUserAccount,
+  verifyUserAccount,
+} from './src/utils/storeLogic.ts';
 
 dotenv.config();
 
@@ -38,6 +48,48 @@ interface OrderRecord {
 const orders: OrderRecord[] = [];
 const subscribers: Array<{ email: string; subscribedAt: string }> = [];
 const feedbacks: Array<{ name: string; email: string; rating: number; message: string; date: string }> = [];
+
+interface StoredUserRecord {
+  account: UserAccount;
+  passwordSalt: string;
+  passwordHash: string;
+}
+
+function hashPassword(password: string, salt?: string): { salt: string; hash: string } {
+  const actualSalt = salt || crypto.randomBytes(16).toString('hex');
+  const derivedKey = crypto.scryptSync(password, actualSalt, 64).toString('hex');
+  return { salt: actualSalt, hash: derivedKey };
+}
+
+function verifyPasswordHash(password: string, salt: string, expectedHash: string): boolean {
+  const { hash } = hashPassword(password, salt);
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedHash, 'hex'));
+}
+
+const seedPassword = hashPassword('Password123');
+const storedAccounts: StoredUserRecord[] = [
+  {
+    account: {
+      accountId: 'KH-USR-1001',
+      fullName: 'Sokha Chan',
+      email: 'sokha.chan@example.com',
+      phone: '+855 12 345 678',
+      role: 'customer',
+      status: 'active',
+      verified: true,
+      permissions: ['store:shop', 'vip:first_order_discount', 'autoship:manage', 'orders:track'],
+      address: 'Street 240, Daun Penh',
+      city: 'Phnom Penh',
+      postalCode: '12000',
+      discountCode: 'HARVEST15',
+      createdAt: '2026-10-15T08:00:00.000Z',
+    },
+    passwordSalt: seedPassword.salt,
+    passwordHash: seedPassword.hash,
+  },
+];
+
+const activeSessions = new Map<string, string>(); // token -> accountId
 
 let genAI: GoogleGenAI | null = null;
 if (process.env.GEMINI_API_KEY) {
@@ -188,6 +240,92 @@ app.post('/api/orders', (req: Request, res: Response) => {
   });
 });
 
+// Order tracking status check endpoint
+app.get('/api/orders/:orderId', (req: Request, res: Response) => {
+  const customTracked: TrackedOrder[] = orders.map((o) => ({
+    orderId: o.orderId,
+    createdAt: new Date(o.createdAt).toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    }),
+    estimatedDelivery: 'Within 2–3 Business Days',
+    status: o.status === 'shipped' ? 'in_transit' : 'roasting',
+    statusLabel: o.status === 'shipped' ? 'In Transit' : 'Small-Batch Roasting & Packing',
+    currentLocation: 'Kampot Solar Roastery & Glass Packing Hub',
+    carrier: 'Kampot Eco-Express',
+    trackingCode: `KEX-${o.orderId.slice(-6)}-KH`,
+    customer: {
+      name: o.customer.name,
+      city: o.customer.city || 'Phnom Penh',
+      postalCode: o.customer.postalCode || '12000',
+    },
+    items: o.items.map((item) => ({
+      name: item.name,
+      variantLabel: item.variantLabel,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    total: o.summary?.total ?? 0,
+    timeline: [
+      {
+        stage: 'confirmed',
+        title: 'Order Confirmed',
+        location: 'Kampot Harvest Online Store',
+        timestamp: 'Just now',
+        completed: true,
+        current: false,
+      },
+      {
+        stage: 'roasting',
+        title: 'Small-Batch Roasted & Glass Sealed',
+        location: 'Kampot Solar Roastery, Active Batch',
+        timestamp: 'In Progress',
+        completed: true,
+        current: true,
+      },
+      {
+        stage: 'in_transit',
+        title: 'In Transit to Destination Hub',
+        location: `${o.customer.city || 'Phnom Penh'} Regional Hub`,
+        timestamp: 'Pending Dispatch',
+        completed: false,
+        current: false,
+      },
+      {
+        stage: 'out_for_delivery',
+        title: 'Out for Local Eco-Courier Delivery',
+        location: `${o.customer.city || 'Phnom Penh'} (${o.customer.postalCode || '12000'})`,
+        timestamp: 'Pending',
+        completed: false,
+        current: false,
+      },
+      {
+        stage: 'delivered',
+        title: 'Delivered',
+        location: `${o.customer.name} · ${o.customer.city || 'Phnom Penh'}`,
+        timestamp: 'Estimated in 2–3 Days',
+        completed: false,
+        current: false,
+      },
+    ],
+  }));
+
+  const lookup = lookupOrderStatus(req.params.orderId, customTracked);
+  if (!lookup.found || !lookup.order) {
+    return res.status(404).json({
+      found: false,
+      error: lookup.error || 'Order not found',
+    });
+  }
+
+  return res.json({
+    found: true,
+    order: lookup.order,
+  });
+});
+
 // Newsletter subscription endpoint
 app.post('/api/newsletter', (req: Request, res: Response) => {
   const { email } = req.body;
@@ -228,6 +366,145 @@ app.post('/api/feedback', (req: Request, res: Response) => {
     success: true,
     message: 'Thank you for your valuable feedback!',
     feedback: entry,
+  });
+});
+
+// ----------------- User Account & Authentication Endpoints -----------------
+
+app.post('/api/auth/register', (req: Request, res: Response) => {
+  const input = req.body as AccountRegistrationInput;
+  const existingUsers = storedAccounts.map((r) => r.account);
+
+  const creation = createUserAccount(input, existingUsers);
+  if (!creation.success || !creation.account) {
+    const statusCode = creation.error?.includes('already exists') ? 409 : 400;
+    return res.status(statusCode).json({
+      success: false,
+      error: creation.error || 'Invalid registration data',
+      fieldErrors: creation.fieldErrors || {},
+    });
+  }
+
+  const { salt, hash } = hashPassword(input.password);
+  storedAccounts.push({
+    account: creation.account,
+    passwordSalt: salt,
+    passwordHash: hash,
+  });
+
+  // Automatically add new account to VIP newsletter list
+  if (!subscribers.some((s) => s.email.toLowerCase() === creation.account!.email)) {
+    subscribers.push({
+      email: creation.account.email,
+      subscribedAt: creation.account.createdAt,
+    });
+  }
+
+  const token = crypto.randomBytes(24).toString('hex');
+  activeSessions.set(token, creation.account.accountId);
+
+  return res.status(201).json({
+    success: true,
+    message:
+      creation.account.status === 'pending_verification'
+        ? 'Wholesale partner account created! Complete business verification to unlock bulk ordering.'
+        : 'Welcome to Kampot Harvest! Your account is active and 15% VIP discount is unlocked.',
+    account: creation.account,
+    token,
+  });
+});
+
+app.post('/api/auth/login', (req: Request, res: Response) => {
+  const { email, password } = req.body as { email?: string; password?: string };
+  if (!email || !password) {
+    return res.status(400).json({
+      success: false,
+      error: 'Please enter both email and password',
+    });
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const record = storedAccounts.find(
+    (r) => r.account.email.toLowerCase() === normalizedEmail
+  );
+
+  if (!record || !verifyPasswordHash(password, record.passwordSalt, record.passwordHash)) {
+    return res.status(401).json({
+      success: false,
+      error: 'Invalid email or password',
+    });
+  }
+
+  if (record.account.status === 'suspended') {
+    return res.status(403).json({
+      success: false,
+      error: 'This account has been suspended. Please contact support.',
+    });
+  }
+
+  const token = crypto.randomBytes(24).toString('hex');
+  activeSessions.set(token, record.account.accountId);
+
+  return res.json({
+    success: true,
+    message: `Welcome back, ${record.account.fullName}!`,
+    account: record.account,
+    token,
+  });
+});
+
+app.post('/api/auth/verify', (req: Request, res: Response) => {
+  const { accountId } = req.body as { accountId?: string };
+  const record = storedAccounts.find((r) => r.account.accountId === accountId);
+
+  if (!record) {
+    return res.status(404).json({
+      success: false,
+      error: 'Account not found',
+    });
+  }
+
+  record.account = verifyUserAccount(record.account);
+
+  return res.json({
+    success: true,
+    message: 'Business verification complete! Wholesale bulk ordering is now unlocked.',
+    account: record.account,
+  });
+});
+
+app.post('/api/auth/logout', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    activeSessions.delete(token);
+  }
+  return res.json({ success: true });
+});
+
+app.get('/api/auth/me', (req: Request, res: Response) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ authenticated: false });
+  }
+  const token = authHeader.slice(7);
+  const accountId = activeSessions.get(token);
+  if (!accountId) {
+    return res.status(401).json({ authenticated: false });
+  }
+  const record = storedAccounts.find((r) => r.account.accountId === accountId);
+  if (!record) {
+    return res.status(401).json({ authenticated: false });
+  }
+
+  const userOrders = orders.filter(
+    (o) => o.customer.email.toLowerCase() === record.account.email.toLowerCase()
+  );
+
+  return res.json({
+    authenticated: true,
+    account: record.account,
+    orders: userOrders,
   });
 });
 

@@ -2,10 +2,13 @@ import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
+import { AccountRole } from '../utils/storeLogic';
 
 interface FooterSectionProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
   onOpenFeedbackModal: () => void;
+  onOpenTrackOrderModal?: () => void;
+  onOpenAccountModal?: (role?: AccountRole) => void;
   onSelectProduct?: (product: Product) => void;
   onAddProductToCart?: (product: Product) => void;
 }
@@ -13,6 +16,8 @@ interface FooterSectionProps {
 export const FooterSection: React.FC<FooterSectionProps> = ({
   onNavigate,
   onOpenFeedbackModal,
+  onOpenTrackOrderModal,
+  onOpenAccountModal,
   onSelectProduct,
   onAddProductToCart,
 }) => {
@@ -198,24 +203,43 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                 </button>
                 <button
                   type="button"
-                  onClick={onOpenFeedbackModal}
+                  onClick={() =>
+                    onOpenAccountModal
+                      ? onOpenAccountModal('wholesale')
+                      : onOpenFeedbackModal()
+                  }
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
                   {t('footer_wholesale', 'Wholesale')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate('rewards')}
+                  onClick={() =>
+                    onOpenAccountModal
+                      ? onOpenAccountModal('affiliate')
+                      : onNavigate('rewards')
+                  }
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
                   {t('footer_affiliate', 'Affiliate')}
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate('autoship')}
+                  onClick={() =>
+                    onOpenAccountModal
+                      ? onOpenAccountModal('customer')
+                      : onNavigate('autoship')
+                  }
                   className="hover:text-[#9AB87A] transition-colors cursor-pointer"
                 >
                   {t('footer_account', 'Account')}
+                </button>
+                <button
+                  type="button"
+                  onClick={onOpenTrackOrderModal}
+                  className="hover:text-[#9AB87A] font-semibold underline underline-offset-4 decoration-[#9AB87A]/60 transition-colors cursor-pointer"
+                >
+                  {t('footer_track_order', 'Track Order')}
                 </button>
               </div>
 

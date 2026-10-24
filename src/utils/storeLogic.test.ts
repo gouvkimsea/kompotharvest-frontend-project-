@@ -7,6 +7,13 @@ import {
   CURRENCY_SYMBOL,
   validateCheckoutForm,
   calculateNutritionSaving,
+  validateOrderNumber,
+  lookupOrderStatus,
+  validateAccountRegistration,
+  createUserAccount,
+  verifyUserAccount,
+  hasAccountPermission,
+  getRolePermissions,
 } from './storeLogic';
 import { PRODUCTS } from '../data/botenzData';
 
@@ -115,4 +122,132 @@ test('PRODUCTS catalog matches Artisan Roasted Cashews specification ($10 for 10
     }
   }
 });
+
+test('validateOrderNumber and lookupOrderStatus validate and return real-time delivery status', () => {
+  const emptyCheck = validateOrderNumber('   ');
+  assert.equal(emptyCheck.valid, false);
+  assert.ok(emptyCheck.error);
+
+  const badFormat = validateOrderNumber('12345');
+  assert.equal(badFormat.valid, false);
+  assert.ok(badFormat.error);
+
+  const validCheck = validateOrderNumber('#kh-2026-1042');
+  assert.equal(validCheck.valid, true);
+  assert.equal(validCheck.normalized, 'KH-2026-1042');
+
+  const foundRes = lookupOrderStatus('kh-2026-1042');
+  assert.equal(foundRes.found, true);
+  assert.equal(foundRes.order?.orderId, 'KH-2026-1042');
+  assert.equal(foundRes.order?.status, 'in_transit');
+  assert.equal(foundRes.order?.timeline.length, 5);
+
+  const missingRes = lookupOrderStatus('KH-2026-9999');
+  assert.equal(missingRes.found, false);
+  assert.ok(missingRes.error?.includes('KH-2026-9999'));
+});
+
+test('validateAccountRegistration rejects empty or invalid inputs with clear field errors', () => {
+  const emptyRes = validateAccountRegistration({
+    fullName: '',
+    email: 'invalid-email',
+    phone: '12345',
+    password: 'short',
+    confirmPassword: 'mismatch',
+    role: 'wholesale',
+    companyName: '',
+    postalCode: '12',
+  });
+  assert.equal(emptyRes.valid, false);
+  assert.ok(emptyRes.errors.fullName);
+  assert.ok(emptyRes.errors.email);
+  assert.ok(emptyRes.errors.phone);
+  assert.ok(emptyRes.errors.password);
+  assert.ok(emptyRes.errors.confirmPassword);
+  assert.ok(emptyRes.errors.companyName);
+  assert.ok(emptyRes.errors.postalCode);
+});
+
+test('createUserAccount creates customer, affiliate, and wholesale accounts and prevents duplicates', () => {
+  const customerRes = createUserAccount({
+    fullName: 'Sokha Chan',
+    email: 'Sokha.Chan@example.com',
+    phone: '+855 12 345 678',
+    password: 'Password123',
+    confirmPassword: 'Password123',
+    role: 'customer',
+    city: 'Phnom Penh',
+    postalCode: '12000',
+  });
+
+  assert.equal(customerRes.success, true);
+  assert.ok(customerRes.account);
+  assert.equal(customerRes.account.email, 'sokha.chan@example.com');
+  assert.equal(customerRes.account.status, 'active');
+  assert.equal(customerRes.account.verified, true);
+  assert.equal(customerRes.account.discountCode, 'HARVEST15');
+  assert.equal(hasAccountPermission(customerRes.account, 'autoship:manage'), true);
+  assert.equal(hasAccountPermission(customerRes.account, 'wholesale:bulk_order'), false);
+
+  // Duplicate email prevention (case-insensitive)
+  const dupRes = createUserAccount(
+    {
+      fullName: 'Another Sokha',
+      email: 'SOKHA.CHAN@EXAMPLE.COM',
+      phone: '+855 12 999 888',
+      password: 'Password123',
+      confirmPassword: 'Password123',
+      role: 'customer',
+    },
+    [customerRes.account]
+  );
+  assert.equal(dupRes.success, false);
+  assert.ok(dupRes.error?.includes('already exists'));
+  assert.ok(dupRes.fieldErrors?.email);
+
+  // Affiliate account receives active status and referralCode + affiliate:referrals permission
+  const affiliateRes = createUserAccount(
+    {
+      fullName: 'Dara Pich',
+      email: 'dara@example.com',
+      phone: '0123456789',
+      password: 'Password123',
+      confirmPassword: 'Password123',
+      role: 'affiliate',
+    },
+    [customerRes.account]
+  );
+  assert.equal(affiliateRes.success, true);
+  assert.equal(affiliateRes.account?.status, 'active');
+  assert.ok(affiliateRes.account?.referralCode?.startsWith('KH-REF-'));
+  assert.equal(hasAccountPermission(affiliateRes.account, 'affiliate:referrals'), true);
+
+  // Wholesale account starts in pending_verification and unlocks wholesale:bulk_order only after verification
+  const wholesaleRes = createUserAccount(
+    {
+      fullName: 'Mealea Vong',
+      email: 'mealea@b2bmarket.com',
+      phone: '0987654321',
+      password: 'Password123',
+      confirmPassword: 'Password123',
+      role: 'wholesale',
+      companyName: 'Mekong Organic Grocers',
+    },
+    [customerRes.account, affiliateRes.account!]
+  );
+  assert.equal(wholesaleRes.success, true);
+  assert.equal(wholesaleRes.account?.status, 'pending_verification');
+  assert.equal(wholesaleRes.account?.verified, false);
+  assert.equal(hasAccountPermission(wholesaleRes.account, 'wholesale:bulk_order'), false);
+
+  const verifiedWholesale = verifyUserAccount(wholesaleRes.account!);
+  assert.equal(verifiedWholesale.status, 'active');
+  assert.equal(verifiedWholesale.verified, true);
+  assert.equal(hasAccountPermission(verifiedWholesale, 'wholesale:bulk_order'), true);
+
+  // Suspended accounts have zero permissions
+  assert.deepEqual(getRolePermissions('customer', 'suspended'), []);
+});
+
+
 

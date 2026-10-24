@@ -19,6 +19,8 @@ import {
   calculateCartSummary,
   calculateNutritionSaving,
   validateCheckoutForm,
+  UserAccount,
+  hasAccountPermission,
 } from '../utils/storeLogic';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
@@ -423,12 +425,16 @@ interface BotenzWayAndAutoshipProps {
   mode: 'way' | 'autoship' | 'rewards';
   onAddProductToCart: (product: Product, isAutoship?: boolean) => void;
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
+  currentUser?: UserAccount | null;
+  onOpenAccountModal?: () => void;
 }
 
 export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
   mode,
   onAddProductToCart,
   onNavigate,
+  currentUser,
+  onOpenAccountModal,
 }) => {
   const { t, formatPrice } = useI18n();
   const [servingsPerWeek, setServingsPerWeek] = useState(7);
@@ -506,10 +512,18 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
                 <div className="mt-7 flex flex-wrap items-center gap-4">
                   <button
                     type="button"
-                    onClick={() => onAddProductToCart(selectedAutoshipFlavor, true)}
+                    onClick={() => {
+                      if (!hasAccountPermission(currentUser, 'autoship:manage') && onOpenAccountModal) {
+                        onOpenAccountModal();
+                        return;
+                      }
+                      onAddProductToCart(selectedAutoshipFlavor, true);
+                    }}
                     className="px-9 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[16px] font-semibold shadow-md transition-colors cursor-pointer"
                   >
-                    {t('btn_start_autoship')} — {formatPrice(Math.round(selectedAutoshipFlavor.price * 0.85 * 100) / 100)}
+                    {hasAccountPermission(currentUser, 'autoship:manage')
+                      ? `${t('btn_start_autoship')} — ${formatPrice(Math.round(selectedAutoshipFlavor.price * 0.85 * 100) / 100)}`
+                      : `Create Account to ${t('btn_start_autoship')} — ${formatPrice(Math.round(selectedAutoshipFlavor.price * 0.85 * 100) / 100)}`}
                   </button>
                   <button
                     type="button"
@@ -648,6 +662,8 @@ interface CartDrawerProps {
   onUpdateQuantity: (id: string, delta: number) => void;
   onRemoveItem: (id: string) => void;
   onClearCart: () => void;
+  onTrackOrder?: (orderId: string) => void;
+  currentUser?: UserAccount | null;
 }
 
 export const CartDrawer: React.FC<CartDrawerProps> = ({
@@ -659,6 +675,8 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onUpdateQuantity,
   onRemoveItem,
   onClearCart,
+  onTrackOrder,
+  currentUser,
 }) => {
   const { t, formatPrice, currency } = useI18n();
   const [step, setStep] = useState<'cart' | 'checkout' | 'confirmed'>('cart');
@@ -674,6 +692,19 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [orderId, setOrderId] = useState<string>('KH-2026-1042');
   const [isSubmittingOrder, setIsSubmittingOrder] = useState<boolean>(false);
+
+  React.useEffect(() => {
+    if (currentUser) {
+      setForm((prev) => ({
+        fullName: prev.fullName || currentUser.fullName || '',
+        email: prev.email || currentUser.email || '',
+        phone: prev.phone || currentUser.phone || '',
+        address: prev.address || currentUser.address || '',
+        city: prev.city || currentUser.city || '',
+        pincode: prev.pincode || currentUser.postalCode || '',
+      }));
+    }
+  }, [currentUser]);
 
   if (!isOpen) return null;
 
@@ -792,16 +823,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   Order successfully recorded on your backend server. Tracking and invoice receipt generated for <strong>{form.email}</strong>.
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setStep('cart');
-                  onClose();
-                }}
-                className="mt-4 px-8 py-3 rounded-full bg-[#8B6D3B] text-[#F2F0E3] font-semibold text-sm cursor-pointer"
-              >
-                {t('btn_continue_shopping')}
-              </button>
+              <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
+                {onTrackOrder && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setStep('cart');
+                      onClose();
+                      onTrackOrder(orderId);
+                    }}
+                    className="px-6 py-3 rounded-full bg-[#384A22] hover:bg-[#2B3B18] text-[#F2F0E3] font-semibold text-sm cursor-pointer whitespace-nowrap"
+                  >
+                    {t('footer_track_order', 'Track Order')}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep('cart');
+                    onClose();
+                  }}
+                  className="px-6 py-3 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] font-semibold text-sm cursor-pointer whitespace-nowrap"
+                >
+                  {t('btn_continue_shopping')}
+                </button>
+              </div>
             </div>
           ) : step === 'checkout' ? (
             <form id="checkout-form" onSubmit={handleCheckoutSubmit} className="space-y-4">

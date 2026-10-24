@@ -15,8 +15,16 @@ import {
   RecipesPageView,
   ShopPageView,
 } from './components/SubpagesAndModals';
-import { BundleItem, Product, RecipeItem } from './data/botenzData';
-import { CartItem, calculateCartSummary } from './utils/storeLogic';
+import { TrackOrderModal } from './components/TrackOrderModal';
+import { AccountModal } from './components/AccountModal';
+import { ASSETS, BundleItem, Product, RecipeItem } from './data/botenzData';
+import {
+  CartItem,
+  calculateCartSummary,
+  UserAccount,
+  AccountRole,
+  hasAccountPermission,
+} from './utils/storeLogic';
 import { useI18n } from './utils/i18nContext';
 
 export default function App() {
@@ -33,6 +41,15 @@ export default function App() {
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeItem | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isFirstOrderModalOpen, setIsFirstOrderModalOpen] = useState<boolean>(false);
+  const [isTrackOrderModalOpen, setIsTrackOrderModalOpen] = useState<boolean>(false);
+  const [trackedOrderNumber, setTrackedOrderNumber] = useState<string>('');
+
+  // User account & authentication state
+  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
+  const [authToken, setAuthToken] = useState<string | null>(null);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
+  const [accountModalMode, setAccountModalMode] = useState<'register' | 'login'>('register');
+  const [accountModalRole, setAccountModalRole] = useState<AccountRole>('customer');
 
   // Favorite recipes state
   const [favoriteRecipes, setFavoriteRecipes] = useState<string[]>([
@@ -158,6 +175,12 @@ export default function App() {
         cartTotal={summary.total}
         onOpenCart={() => setIsCartOpen(true)}
         onOpenDiscountModal={() => setIsFirstOrderModalOpen(true)}
+        currentUserName={currentUser?.fullName || null}
+        onOpenAccountModal={() => {
+          setAccountModalMode('register');
+          setAccountModalRole('customer');
+          setIsAccountModalOpen(true);
+        }}
       />
 
       {/* Main Content Area */}
@@ -227,6 +250,12 @@ export default function App() {
               handleAddProductToCart(product, isAutoship)
             }
             onNavigate={handleNavigate}
+            currentUser={currentUser}
+            onOpenAccountModal={() => {
+              setAccountModalMode('register');
+              setAccountModalRole('customer');
+              setIsAccountModalOpen(true);
+            }}
           />
         )}
       </main>
@@ -235,6 +264,15 @@ export default function App() {
       <FooterSection
         onNavigate={handleNavigate}
         onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
+        onOpenTrackOrderModal={() => {
+          setTrackedOrderNumber('');
+          setIsTrackOrderModalOpen(true);
+        }}
+        onOpenAccountModal={(role = 'customer') => {
+          setAccountModalMode('register');
+          setAccountModalRole(role);
+          setIsAccountModalOpen(true);
+        }}
         onSelectProduct={(product) => {
           setSelectedBundle(null);
           setSelectedProduct(product);
@@ -278,6 +316,11 @@ export default function App() {
         onUpdateQuantity={handleUpdateQuantity}
         onRemoveItem={handleRemoveItem}
         onClearCart={() => setCartItems([])}
+        currentUser={currentUser}
+        onTrackOrder={(newOrderId) => {
+          setTrackedOrderNumber(newOrderId);
+          setIsTrackOrderModalOpen(true);
+        }}
       />
 
       {/* Product / Bundle Detail Modal */}
@@ -314,6 +357,80 @@ export default function App() {
       <FeedbackModal
         isOpen={isFeedbackModalOpen}
         onClose={() => setIsFeedbackModalOpen(false)}
+      />
+
+      {/* Real-Time Order Status Tracking Modal */}
+      <TrackOrderModal
+        isOpen={isTrackOrderModalOpen}
+        onClose={() => setIsTrackOrderModalOpen(false)}
+        initialOrderNumber={trackedOrderNumber}
+      />
+
+      {/* User Account Creation, Authentication & Role Portal Modal */}
+      <AccountModal
+        isOpen={isAccountModalOpen}
+        onClose={() => setIsAccountModalOpen(false)}
+        currentUser={currentUser}
+        initialMode={accountModalMode}
+        initialRole={accountModalRole}
+        onAuthSuccess={(account, token) => {
+          setCurrentUser(account);
+          if (token) setAuthToken(token);
+          if (hasAccountPermission(account, 'vip:first_order_discount')) {
+            setPromoCodeActive(true);
+          }
+          showToast(`Signed in as ${account.fullName} (${account.role})`);
+        }}
+        onLogout={() => {
+          if (authToken) {
+            void fetch('/api/auth/logout', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${authToken}` },
+            }).catch(() => {});
+          }
+          setCurrentUser(null);
+          setAuthToken(null);
+          setIsAccountModalOpen(false);
+          showToast('Signed out of your Kampot Harvest account.');
+        }}
+        onApplyVipDiscount={() => {
+          setPromoCodeActive(true);
+          showToast('15% VIP Member Discount (HARVEST15) applied to bag!');
+        }}
+        onOpenTrackOrder={() => {
+          setTrackedOrderNumber('KH-2026-1042');
+          setIsTrackOrderModalOpen(true);
+        }}
+        onNavigateAutoship={() => {
+          handleNavigate('autoship');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onAddWholesaleCaseToCart={() => {
+          if (!hasAccountPermission(currentUser, 'wholesale:bulk_order')) return;
+          setCartItems((prev) => {
+            const existing = prev.find((i) => i.id === 'wholesale-master-case-24');
+            if (existing) {
+              return prev.map((i) =>
+                i.id === 'wholesale-master-case-24'
+                  ? { ...i, quantity: i.quantity + 1 }
+                  : i
+              );
+            }
+            return [
+              ...prev,
+              {
+                id: 'wholesale-master-case-24',
+                name: 'Wholesale Master Case (24× 250g Glass Jars)',
+                variantLabel: 'Verified B2B Partner Rate (25% OFF)',
+                price: 360,
+                originalPrice: 480,
+                quantity: 1,
+                image: ASSETS.megaShopBundles,
+              },
+            ];
+          });
+          showToast('Added Wholesale Master Case (24× 250g Jars) to Bag!');
+        }}
       />
     </div>
   );

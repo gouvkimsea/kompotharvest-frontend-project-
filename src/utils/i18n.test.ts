@@ -95,13 +95,14 @@ test('all required component keys exist and are translated across EN, KM, and ZH
     'eco_pillar_1_title', 'eco_pillar_2_title', 'eco_pillar_3_title', 'eco_pillar_4_title',
     // Footer
     'footer_artisan_title', 'footer_artisan_desc', 'footer_honey_bullet', 'footer_chili_bullet', 'footer_single_bullet',
-    'btn_order_now', 'footer_cta_msg', 'footer_sec_info', 'footer_sec_about', 'footer_sec_shop', 'footer_sec_more',
+    'btn_order_now', 'footer_cta_msg', 'footer_sec_info', 'footer_sec_about', 'footer_sec_shop', 'footer_sec_more', 'footer_track_order',
     // Subpages & Modals
     'autoship_step_1', 'autoship_step_2', 'autoship_freq_30', 'autoship_freq_45', 'autoship_freq_60',
     'calc_impact_title', 'calc_impact_desc', 'calc_servings_label', 'calc_calories_saved', 'calc_fat_reduced', 'calc_plant_protein',
     'recipes_page_title', 'recipes_all_tab', 'btn_share_recipe', 'recipe_ingredients_title', 'recipe_prep_steps_title',
     'offer_modal_title', 'offer_modal_subtitle', 'offer_goal_weight', 'offer_goal_protein', 'offer_goal_lifestyle', 'offer_decline',
     'fb_modal_title', 'fb_name_label', 'fb_role_label', 'fb_msg_label', 'btn_submit_feedback', 'btn_done',
+    'track_modal_title', 'track_btn_check', 'track_timeline_title',
     // Cart & Checkout
     'cart_title', 'cart_empty', 'cart_subtotal', 'cart_shipping', 'cart_total', 'cart_order_confirmed', 'btn_checkout', 'btn_place_order'
   ];
