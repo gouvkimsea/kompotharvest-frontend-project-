@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = Number(process.env.PORT) || 3001;
+const PORT = Number(process.env.PORT) || 3000;
 
 app.use(cors());
 app.use(express.json());
@@ -294,27 +294,39 @@ Respond to this customer inquiry with warm, gourmet, enticing advice and recomme
   });
 });
 
-// Production: serve built frontend static files
-const distPath = path.join(__dirname, 'dist');
-app.use(express.static(distPath));
+async function startServer() {
+  if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    const distPath = path.join(__dirname, 'dist');
+    app.use(express.static(distPath));
 
-app.get('*', (req: Request, res: Response, next) => {
-  if (req.path.startsWith('/api')) {
-    return next();
+    app.get('*', (req: Request, res: Response, next) => {
+      if (req.path.startsWith('/api')) {
+        return next();
+      }
+      res.sendFile(path.join(distPath, 'index.html'), (err) => {
+        if (err) {
+          res.status(200).send('Kampot Harvest Backend Running.');
+        }
+      });
+    });
   }
-  res.sendFile(path.join(distPath, 'index.html'), (err) => {
-    if (err) {
-      res.status(200).send('Kampot Harvest Backend Running. Frontend is running on Vite dev server.');
-    }
-  });
-});
 
-app.listen(PORT, () => {
-  console.log(`\n🌿 [Kampot Harvest Fullstack Server]`);
-  console.log(`🚀 Backend API running on: http://localhost:${PORT}`);
-  console.log(`📡 Health Check:          http://localhost:${PORT}/api/health`);
-  console.log(`📦 Products Endpoint:      http://localhost:${PORT}/api/products`);
-  console.log(`🤖 Gemini AI Sommelier:    ${genAI ? 'Enabled' : 'Curated Fallback'}\n`);
-});
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🌿 [Kampot Harvest Fullstack Server]`);
+    console.log(`🚀 Server running on:     http://0.0.0.0:${PORT}`);
+    console.log(`📡 Health Check:          http://localhost:${PORT}/api/health`);
+    console.log(`📦 Products Endpoint:      http://localhost:${PORT}/api/products`);
+    console.log(`🤖 Gemini AI Sommelier:    ${genAI ? 'Enabled' : 'Curated Fallback'}\n`);
+  });
+}
+
+startServer();
 
 export default app;
