@@ -247,18 +247,10 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                 fallbackBg="transparent"
               />
             </div>
-            {/* Subtle appetizing flavor pill accent */}
-            <div className="absolute bottom-6 right-8 bg-[#8B6D3B]/90 backdrop-blur-sm text-[#F2F0E3] text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full shadow-lg border border-[#F2F0E3]/20 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E5B54F]" />
-              <span>{t('flavor_pill_honey')}</span>
-            </div>
           </div>
 
           {/* Center 25% OFF Offer Block */}
           <div className="flex-1 text-center z-10 px-4 max-w-xl mx-auto">
-            <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#8B6D3B]/25 text-[#E5B54F] border border-[#E5B54F]/30 text-xs font-semibold tracking-wider uppercase mb-2">
-              <span>{t('hero_batch_badge')}</span>
-            </div>
             <h2 className="text-[68px] sm:text-[96px] lg:text-[115px] font-extrabold text-[#F2F0E3] leading-none tracking-tight">
               {t('hero_bundle_offer_title')}
             </h2>
@@ -290,11 +282,6 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                 className="w-full h-auto object-contain"
                 fallbackBg="transparent"
               />
-            </div>
-            {/* Subtle appetizing flavor pill accent */}
-            <div className="absolute bottom-6 left-8 bg-[#B83A2A]/90 backdrop-blur-sm text-[#F2F0E3] text-[11px] font-bold tracking-wider uppercase px-3 py-1 rounded-full shadow-lg border border-[#F2F0E3]/20 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7D6B]" />
-              <span>{t('flavor_pill_chili')}</span>
             </div>
           </div>
         </div>
