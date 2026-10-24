@@ -14,6 +14,12 @@ import {
   verifyUserAccount,
   hasAccountPermission,
   getRolePermissions,
+  isAdminAccount,
+  migrateAccountRecord,
+  createInitialInventory,
+  calculateInventoryStats,
+  applyInventoryOrderDeduction,
+  adjustInventoryStock,
 } from './storeLogic';
 import { PRODUCTS } from '../data/botenzData';
 
@@ -168,16 +174,13 @@ test('validateAccountRegistration rejects empty or invalid inputs with clear fie
   assert.ok(emptyRes.errors.postalCode);
 });
 
-test('createUserAccount creates customer, affiliate, and wholesale accounts and prevents duplicates', () => {
+test('createUserAccount creates customer, affiliate, and wholesale accounts without requiring phone/address at registration and prevents duplicates', () => {
   const customerRes = createUserAccount({
     fullName: 'Sokha Chan',
     email: 'Sokha.Chan@example.com',
-    phone: '+855 12 345 678',
     password: 'Password123',
     confirmPassword: 'Password123',
     role: 'customer',
-    city: 'Phnom Penh',
-    postalCode: '12000',
   });
 
   assert.equal(customerRes.success, true);
@@ -194,7 +197,6 @@ test('createUserAccount creates customer, affiliate, and wholesale accounts and 
     {
       fullName: 'Another Sokha',
       email: 'SOKHA.CHAN@EXAMPLE.COM',
-      phone: '+855 12 999 888',
       password: 'Password123',
       confirmPassword: 'Password123',
       role: 'customer',
@@ -248,6 +250,92 @@ test('createUserAccount creates customer, affiliate, and wholesale accounts and 
   // Suspended accounts have zero permissions
   assert.deepEqual(getRolePermissions('customer', 'suspended'), []);
 });
+
+test('Public registration blocks self-assigning admin role and migrateAccountRecord preserves existing accounts', () => {
+  const selfAdminAttempt = createUserAccount({
+    fullName: 'Attacker User',
+    email: 'attacker@example.com',
+    password: 'Password123',
+    confirmPassword: 'Password123',
+    role: 'admin',
+  });
+  assert.equal(selfAdminAttempt.success, false);
+  assert.ok(selfAdminAttempt.error?.includes('Admin role cannot be assigned'));
+
+  const normalUserRes = createUserAccount({
+    fullName: 'VannakLim',
+    email: 'vannak@example.com',
+    password: 'Password123',
+    confirmPassword: 'Password123',
+  });
+  assert.equal(normalUserRes.success, true);
+  assert.equal(normalUserRes.account?.role, 'user');
+  assert.equal(isAdminAccount(normalUserRes.account), false);
+
+  // Migrate legacy customer record safely to 'user' while preserving all fields
+  const migratedUser = migrateAccountRecord({
+    ...normalUserRes.account!,
+    role: 'customer',
+  });
+  assert.equal(migratedUser.role, 'user');
+  assert.equal(migratedUser.email, 'vannak@example.com');
+  assert.equal(hasAccountPermission(migratedUser, 'admin:inventory'), false);
+});
+
+test('Inventory calculations, order deductions, and stock adjustments reflect business rules', () => {
+  const initial = createInitialInventory();
+  const stats = calculateInventoryStats(initial);
+
+  assert.equal(stats.totalProducts, 7);
+  assert.equal(stats.totalStockUnits, 84 + 14 + 62 + 9 + 28 + 0 + 45);
+  assert.equal(stats.lowStockCount, 2); // chili-lime-100g-pouch (14<=20), chilli-lime-250g-jar (9<=15)
+  assert.equal(stats.outOfStockCount, 1); // bundle-nut-lovers (0)
+
+  // Deduct stock on completed purchase
+  const afterOrder = applyInventoryOrderDeduction(
+    initial,
+    [
+      {
+        id: 'honey-butter-100g-pouch',
+        name: 'Artisan Roasted Cashews — Honey Butter (100g Pouch)',
+        variantLabel: '100g Pouch',
+        price: 10,
+        originalPrice: 10,
+        quantity: 4,
+        image: '',
+      },
+    ],
+    'KH-2026-9001'
+  );
+  const hbItem = afterOrder.updatedInventory.find((i) => i.id === 'honey-butter-100g-pouch');
+  assert.equal(hbItem?.stockQuantity, 80);
+  assert.equal(afterOrder.movements.length, 1);
+  assert.equal(afterOrder.movements[0].quantityDelta, -4);
+
+  // Restock an out-of-stock item via adjustInventoryStock
+  const restocked = adjustInventoryStock(
+    afterOrder.updatedInventory,
+    'bundle-nut-lovers',
+    25,
+    'restock',
+    'New Kampot roastery batch'
+  );
+  assert.equal(restocked.success, true);
+  assert.equal(restocked.updatedItem?.stockQuantity, 25);
+  assert.equal(restocked.updatedItem?.status, 'in_stock');
+
+  // Prevent negative stock adjustments
+  const invalidNegative = adjustInventoryStock(
+    restocked.updatedInventory,
+    'bundle-nut-lovers',
+    -100,
+    'adjustment',
+    'Invalid reduction'
+  );
+  assert.equal(invalidNegative.success, false);
+  assert.ok(invalidNegative.error?.includes('Cannot reduce stock below 0'));
+});
+
 
 
 

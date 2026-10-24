@@ -4,7 +4,14 @@ import { ASSETS } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { useI18n, LANGUAGES, Language } from '../utils/i18nContext';
 
-export type ActivePage = 'home' | 'shop' | 'way' | 'autoship' | 'recipes' | 'rewards';
+export type ActivePage =
+  | 'home'
+  | 'shop'
+  | 'way'
+  | 'autoship'
+  | 'recipes'
+  | 'rewards'
+  | 'admin_inventory';
 
 interface NavbarProps {
   activePage: ActivePage;
@@ -14,6 +21,7 @@ interface NavbarProps {
   onOpenCart: () => void;
   onOpenDiscountModal: () => void;
   currentUserName?: string | null;
+  isAdmin?: boolean;
   onOpenAccountModal?: () => void;
 }
 
@@ -59,6 +67,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenCart,
   onOpenDiscountModal,
   currentUserName,
+  isAdmin = false,
   onOpenAccountModal,
 }) => {
   const { language, setLanguage, t, formatPrice } = useI18n();
@@ -195,6 +204,22 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             {t('nav_recipes')}
           </button>
+
+          {/* Admin Inventory Link (Only visible to authenticated Admins) */}
+          {isAdmin && (
+            <button
+              type="button"
+              data-testid="nav-admin-inventory-btn"
+              onClick={() => handleNavClick('admin_inventory')}
+              className={`whitespace-nowrap shrink-0 pb-1 font-bold text-[#8B6D3B] transition-colors cursor-pointer ${
+                activePage === 'admin_inventory'
+                  ? 'border-b-[1.5px] border-[#8B6D3B]'
+                  : 'hover:text-[#384A22]'
+              }`}
+            >
+              Inventory
+            </button>
+          )}
         </nav>
 
         {/* Zone 3: Functional Controls (Language, Currency) & Cart Action */}
@@ -269,15 +294,31 @@ export const Navbar: React.FC<NavbarProps> = ({
               aria-label={
                 currentUserName
                   ? `Account (${currentUserName})`
-                  : t('footer_account', 'Account')
+                  : 'Sign In'
               }
-              className="hidden sm:inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22]/10 text-[13px] font-bold transition-colors cursor-pointer whitespace-nowrap h-[40px]"
+              className="hidden sm:inline-flex items-center justify-center gap-2 px-3.5 py-1.5 rounded-full border border-[#384A22]/30 text-[#384A22] hover:bg-[#384A22]/10 text-[13px] font-bold transition-colors cursor-pointer whitespace-nowrap h-[42px]"
             >
-              <span>
-                {currentUserName
-                  ? currentUserName.split(' ')[0]
-                  : t('footer_account', 'Account')}
-              </span>
+              {currentUserName ? (
+                <>
+                  <span
+                    data-testid="nav-user-avatar"
+                    className="w-7 h-7 rounded-full bg-[#384A22] text-[#F2F0E3] flex items-center justify-center overflow-hidden shrink-0 border border-[#384A22]/20"
+                    title={`${currentUserName} (Default Profile Picture)`}
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+                    </svg>
+                  </span>
+                  <span>{currentUserName.split(' ')[0]}</span>
+                </>
+              ) : (
+                <span>Sign In</span>
+              )}
             </button>
           )}
 
@@ -719,11 +760,25 @@ export const Navbar: React.FC<NavbarProps> = ({
                   setMobileMenuOpen(false);
                   onOpenAccountModal();
                 }}
-                className="block w-full text-left py-2.5 text-base font-bold text-[#8B6D3B]"
+                className="flex items-center gap-2.5 w-full text-left py-2.5 text-base font-bold text-[#8B6D3B]"
               >
-                {currentUserName
-                  ? `${t('footer_account', 'Account')} (${currentUserName})`
-                  : t('footer_account', 'Account')}
+                {currentUserName ? (
+                  <>
+                    <span className="w-7 h-7 rounded-full bg-[#384A22] text-[#F2F0E3] flex items-center justify-center shrink-0">
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="w-4 h-4"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+                      </svg>
+                    </span>
+                    <span>{currentUserName}</span>
+                  </>
+                ) : (
+                  <span>Sign In</span>
+                )}
               </button>
             )}
           </div>

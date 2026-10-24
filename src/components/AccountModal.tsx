@@ -1,14 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
-  User,
+  ArrowLeft,
   ShieldCheck,
-  Building2,
-  Award,
   CheckCircle2,
   AlertCircle,
-  Lock,
   LogOut,
-  X,
   Truck,
   Sparkles,
 } from 'lucide-react';
@@ -18,10 +14,11 @@ import {
   UserAccount,
   validateAccountRegistration,
   createUserAccount,
-  verifyUserAccount,
-  hasAccountPermission,
+  getRolePermissions,
+  isAdminAccount,
 } from '../utils/storeLogic';
 import { useI18n } from '../utils/i18nContext';
+import { BotenzLogo } from './Navbar';
 
 interface AccountModalProps {
   isOpen: boolean;
@@ -34,7 +31,8 @@ interface AccountModalProps {
   onApplyVipDiscount: () => void;
   onOpenTrackOrder: () => void;
   onNavigateAutoship: () => void;
-  onAddWholesaleCaseToCart: () => void;
+  onNavigateAdminInventory?: () => void;
+  onAddWholesaleCaseToCart?: () => void;
 }
 
 export const AccountModal: React.FC<AccountModalProps> = ({
@@ -42,29 +40,23 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   onClose,
   currentUser,
   initialMode = 'register',
-  initialRole = 'customer',
   onAuthSuccess,
   onLogout,
   onApplyVipDiscount,
   onOpenTrackOrder,
   onNavigateAutoship,
-  onAddWholesaleCaseToCart,
+  onNavigateAdminInventory,
 }) => {
-  const { t, formatPrice } = useI18n();
+  const { t } = useI18n();
   const [authTab, setAuthTab] = useState<'register' | 'login'>(initialMode);
 
-  // Registration state
+  // Simple registration state (no account type selector; phone/city/address/postalCode only asked at checkout)
   const [regForm, setRegForm] = useState<AccountRegistrationInput>({
     fullName: '',
     email: '',
-    phone: '',
     password: '',
     confirmPassword: '',
-    role: initialRole,
-    companyName: '',
-    address: '',
-    city: '',
-    postalCode: '',
+    role: 'customer',
   });
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<keyof AccountRegistrationInput, string>>
@@ -80,38 +72,37 @@ export const AccountModal: React.FC<AccountModalProps> = ({
   // Local registry fallback for offline/client-side continuity
   const [localAccounts, setLocalAccounts] = useState<UserAccount[]>([
     {
+      accountId: 'KH-ADM-0001',
+      fullName: 'Kampot Harvest Admin',
+      email: 'admin@kampotharvest.com',
+      role: 'admin',
+      status: 'active',
+      verified: true,
+      permissions: getRolePermissions('admin', 'active'),
+      discountCode: 'HARVEST15',
+      createdAt: '2026-10-01T08:00:00.000Z',
+    },
+    {
       accountId: 'KH-USR-1001',
       fullName: 'Sokha Chan',
       email: 'sokha.chan@example.com',
-      phone: '+855 12 345 678',
-      role: 'customer',
+      role: 'user',
       status: 'active',
       verified: true,
-      permissions: [
-        'store:shop',
-        'vip:first_order_discount',
-        'autoship:manage',
-        'orders:track',
-      ],
-      address: 'Street 240, Daun Penh',
-      city: 'Phnom Penh',
-      postalCode: '12000',
+      permissions: getRolePermissions('user', 'active'),
       discountCode: 'HARVEST15',
       createdAt: '2026-10-15T08:00:00.000Z',
     },
   ]);
 
-  const [copiedCode, setCopiedCode] = useState<boolean>(false);
-
   useEffect(() => {
     if (isOpen && !currentUser) {
       setAuthTab(initialMode);
-      setRegForm((prev) => ({ ...prev, role: initialRole }));
       setFieldErrors({});
       setGeneralError(null);
       setSuccessBanner(null);
     }
-  }, [isOpen, initialMode, initialRole, currentUser]);
+  }, [isOpen, initialMode, currentUser]);
 
   if (!isOpen) return null;
 
@@ -120,7 +111,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     setGeneralError(null);
     setSuccessBanner(null);
 
-    const clientValidation = validateAccountRegistration(regForm);
+    const payload: AccountRegistrationInput = {
+      ...regForm,
+      role: 'user',
+    };
+
+    const clientValidation = validateAccountRegistration(payload);
     if (!clientValidation.valid) {
       setFieldErrors(clientValidation.errors);
       setGeneralError('Please correct the highlighted fields below.');
@@ -134,7 +130,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(regForm),
+        body: JSON.stringify(payload),
       });
       const data = await response.json();
 
@@ -154,8 +150,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
       );
       onAuthSuccess(createdAccount, data.token);
     } catch {
-      // Fallback to local storeLogic account creation
-      const localResult = createUserAccount(regForm, localAccounts);
+      const localResult = createUserAccount(payload, localAccounts);
       if (!localResult.success || !localResult.account) {
         setFieldErrors(localResult.fieldErrors || {});
         setGeneralError(localResult.error || 'Unable to create account.');
@@ -215,98 +210,56 @@ export const AccountModal: React.FC<AccountModalProps> = ({
     }
   };
 
-  const handleVerifyWholesale = async () => {
-    if (!currentUser) return;
-    setIsSubmitting(true);
-    try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ accountId: currentUser.accountId }),
-      });
-      const data = await response.json();
-      if (response.ok && data.account) {
-        setSuccessBanner(
-          data.message ||
-            'Business verification complete! Wholesale bulk ordering unlocked.'
-        );
-        onAuthSuccess(data.account as UserAccount);
-        setIsSubmitting(false);
-        return;
-      }
-    } catch {
-      // Fallback
-    }
-
-    const verifiedAcc = verifyUserAccount(currentUser);
-    setSuccessBanner(
-      'Business verification complete! Wholesale bulk ordering unlocked.'
-    );
-    onAuthSuccess(verifiedAcc);
-    setIsSubmitting(false);
-  };
-
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
-      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={
+        currentUser
+          ? 'Member Account Profile'
+          : authTab === 'register'
+          ? 'Create Account'
+          : 'Sign In'
+      }
+      className="fixed inset-0 z-50 w-screen h-screen bg-[#F2F0E3] text-[#384A22] overflow-y-auto flex flex-col"
     >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={
-          currentUser
-            ? 'Member Account Profile'
-            : authTab === 'register'
-            ? 'Create Kampot Harvest Account'
-            : 'Sign In to Kampot Harvest'
-        }
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-[#F2F0E3] text-[#384A22] rounded-[28px] shadow-2xl border border-[#384A22]/15 overflow-hidden my-8"
-      >
-        {/* Modal Header */}
-        <div className="bg-[#384A22] text-[#F2F0E3] px-6 sm:px-8 py-6 flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-11 h-11 rounded-2xl bg-[#F2F0E3]/12 flex items-center justify-center shrink-0">
-              <User className="w-6 h-6 text-[#9AB87A]" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight">
-                {currentUser
-                  ? `Welcome, ${currentUser.fullName}`
-                  : authTab === 'register'
-                  ? 'Create Your Kampot Harvest Account'
-                  : 'Sign In to Your Account'}
-              </h2>
-              <p className="text-xs sm:text-sm text-[#F2F0E3]/80 mt-0.5">
-                {currentUser
-                  ? `Account ID: ${currentUser.accountId} · ${
-                      currentUser.role === 'wholesale'
-                        ? 'Wholesale B2B Partner'
-                        : currentUser.role === 'affiliate'
-                        ? 'Affiliate Creator Partner'
-                        : 'VIP Club Member'
-                    }`
-                  : 'Unlock 15% VIP savings, manage Autoship deliveries, or register as a Wholesale / Affiliate partner.'}
-              </p>
-            </div>
-          </div>
+      {/* Clean Full-Screen Top Navigation Bar */}
+      <header className="w-full border-b border-[#384A22]/10 bg-[#F2F0E3]/95 backdrop-blur-xs sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-8 h-[76px] flex items-center justify-between">
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close Account modal"
-            className="p-2 rounded-full hover:bg-white/15 transition-colors cursor-pointer shrink-0"
+            aria-label="Close account page"
+            className="inline-flex items-center gap-2 text-sm font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer"
           >
-            <X className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Store</span>
           </button>
-        </div>
 
-        {/* Modal Body */}
-        <div className="p-6 sm:p-8 max-h-[80vh] overflow-y-auto space-y-6">
+          <BotenzLogo variant="green" className="h-[48px] w-auto object-contain" />
+
+          <div className="w-[100px] flex justify-end">
+            {currentUser && (
+              <button
+                type="button"
+                onClick={onLogout}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B83A2A] hover:underline cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Main Centered Content Area */}
+      <div className="flex-1 flex items-center justify-center px-4 py-10 sm:py-14">
+        <div className="w-full max-w-lg space-y-6">
           {successBanner && (
             <div
               role="status"
-              className="flex items-center gap-2.5 p-4 rounded-xl bg-[#384A22]/10 border border-[#384A22]/25 text-[#384A22] text-xs sm:text-sm font-semibold"
+              className="flex items-center gap-2.5 p-4 rounded-xl bg-[#384A22]/10 border border-[#384A22]/25 text-[#384A22] text-sm font-semibold"
             >
               <CheckCircle2 className="w-5 h-5 text-[#384A22] shrink-0" />
               <span>{successBanner}</span>
@@ -316,7 +269,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
           {generalError && (
             <div
               role="alert"
-              className="flex items-center gap-2.5 p-3.5 rounded-xl bg-[#B83A2A]/10 border border-[#B83A2A]/30 text-[#B83A2A] text-xs sm:text-sm font-medium"
+              className="flex items-center gap-2.5 p-3.5 rounded-xl bg-[#B83A2A]/10 border border-[#B83A2A]/30 text-[#B83A2A] text-sm font-medium"
             >
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{generalError}</span>
@@ -325,190 +278,93 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
           {currentUser ? (
             /* ================================================================
-             * AUTHENTICATED ACCOUNT DASHBOARD
+             * SIMPLE FULL-SCREEN MEMBER PROFILE (NO ACCOUNT TYPE)
              * ============================================================== */
-            <div className="space-y-6">
-              {/* Account Overview & Status Card */}
-              <div className="bg-white rounded-2xl p-5 border border-[#384A22]/12 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-[#384A22]/10">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2 text-xs text-[#384A22]/70 tabular-nums">
-                      <span className="font-mono font-bold text-[#384A22]">
-                        {currentUser.accountId}
-                      </span>
-                      <span aria-hidden="true">·</span>
-                      <span>{currentUser.email}</span>
-                      <span aria-hidden="true">·</span>
-                      <span>{currentUser.phone}</span>
-                    </div>
-                    <h3 className="text-lg font-bold text-[#384A22] mt-1">
-                      {currentUser.fullName}
-                      {currentUser.companyName ? ` — ${currentUser.companyName}` : ''}
-                    </h3>
-                  </div>
-
-                  <div className="sm:text-right shrink-0">
-                    <span className="text-xs text-[#384A22]/60 block">Account Status</span>
-                    <span
-                      className={`text-sm font-bold inline-flex items-center gap-1.5 ${
-                        currentUser.status === 'active'
-                          ? 'text-[#384A22]'
-                          : 'text-[#8B6D3B]'
-                      }`}
-                    >
-                      {currentUser.status === 'active' ? (
-                        <>
-                          <ShieldCheck className="w-4 h-4 text-[#384A22]" />
-                          <span>Active &amp; Verified</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 text-[#8B6D3B]" />
-                          <span>Pending Verification</span>
-                        </>
-                      )}
-                    </span>
-                  </div>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#384A22]/12 shadow-sm space-y-6">
+              {/* Default Profile Picture + Member Identity */}
+              <div className="flex items-center gap-4 pb-6 border-b border-[#384A22]/10">
+                <div
+                  data-testid="profile-default-avatar"
+                  className="w-16 h-16 rounded-full bg-[#384A22] text-[#F2F0E3] flex items-center justify-center shrink-0 shadow-xs"
+                  title="Default Profile Picture"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    className="w-9 h-9"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 12c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm0 2c-3.33 0-10 1.67-10 5v3h20v-3c0-3.33-6.67-5-10-5z" />
+                  </svg>
                 </div>
 
-                {/* Role & Permissions Summary */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
-                  <div>
-                    <span className="text-[#384A22]/60 block">Account Type</span>
-                    <span className="font-semibold text-[#384A22] mt-0.5 capitalize block">
-                      {currentUser.role} Account
-                    </span>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs text-[#384A22]/65 font-mono">
+                    {currentUser.accountId}
                   </div>
-                  <div>
-                    <span className="text-[#384A22]/60 block">VIP Welcome Code</span>
-                    <span className="font-mono font-bold text-[#8B6D3B] mt-0.5 block">
-                      {currentUser.discountCode} (15% OFF)
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[#384A22]/60 block">Saved Delivery City</span>
-                    <span className="font-semibold text-[#384A22] mt-0.5 block">
-                      {currentUser.city
-                        ? `${currentUser.city}${
-                            currentUser.postalCode ? ` (${currentUser.postalCode})` : ''
-                          }`
-                        : 'Phnom Penh (Default)'}
-                    </span>
-                  </div>
+                  <h1 className="text-xl font-bold text-[#384A22] truncate">
+                    {currentUser.fullName}
+                  </h1>
+                  <p className="text-xs text-[#384A22]/75 truncate">
+                    {currentUser.email}
+                  </p>
+                </div>
+
+                <div className="text-right shrink-0">
+                  <span className="text-xs font-bold inline-flex items-center gap-1 text-[#384A22]">
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>Active</span>
+                  </span>
                 </div>
               </div>
 
-              {/* Wholesale Pending Verification / Restricted B2B Ordering Section */}
-              {currentUser.role === 'wholesale' && (
-                <div className="bg-white rounded-2xl p-5 border border-[#384A22]/12 space-y-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h4 className="text-base font-bold text-[#384A22] flex items-center gap-2">
-                        <Building2 className="w-5 h-5 text-[#8B6D3B]" />
-                        <span>Wholesale B2B Partner Portal ({currentUser.companyName})</span>
-                      </h4>
-                      <p className="text-xs text-[#384A22]/75 mt-1">
-                        {hasAccountPermission(currentUser, 'wholesale:bulk_order')
-                          ? 'Your business account is verified. You have full access to B2B Master Case ordering (24× 250g Glass Jars at 25% wholesale discount).'
-                          : 'Wholesale bulk ordering is restricted until your business registration is verified.'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {!hasAccountPermission(currentUser, 'wholesale:bulk_order') ? (
-                    <div className="p-4 rounded-xl bg-[#F2F0E3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="text-xs text-[#384A22]">
-                        <p className="font-bold">Action Required: Business Verification</p>
-                        <p className="text-[#384A22]/75">
-                          Verify {currentUser.companyName} to transition status from Pending to
-                          Active and unlock wholesale case pricing.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        disabled={isSubmitting}
-                        onClick={handleVerifyWholesale}
-                        className="px-5 py-2.5 rounded-xl bg-[#384A22] hover:bg-[#2B3B18] text-[#F2F0E3] text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
-                      >
-                        {isSubmitting ? 'Verifying...' : 'Complete Business Verification'}
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-[#F2F0E3] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {/* Simple Member Actions */}
+              <div className="space-y-2.5">
+                {isAdminAccount(currentUser) && onNavigateAdminInventory && (
+                  <button
+                    type="button"
+                    data-testid="profile-open-admin-inventory-btn"
+                    onClick={() => {
+                      onClose();
+                      onNavigateAdminInventory();
+                    }}
+                    className="w-full p-4 rounded-2xl bg-[#384A22] text-[#F2F0E3] hover:bg-[#2B3B18] flex items-center justify-between transition-colors cursor-pointer text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck className="w-5 h-5 text-[#9AB87A]" />
                       <div>
-                        <p className="text-sm font-bold text-[#384A22]">
-                          Wholesale Master Case (24× 250g Glass Jars)
-                        </p>
-                        <p className="text-xs text-[#384A22]/75 tabular-nums">
-                          12× Honey Butter + 12× Chili Lime · Partner Rate: {formatPrice(360)}{' '}
-                          (Retail {formatPrice(480)})
-                        </p>
+                        <span className="text-sm font-bold block">
+                          Admin Inventory Overview
+                        </span>
+                        <span className="text-xs text-[#F2F0E3]/75">
+                          View and manage full business product inventory
+                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onAddWholesaleCaseToCart();
-                          onClose();
-                        }}
-                        className="px-5 py-2.5 rounded-xl bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-xs font-semibold cursor-pointer whitespace-nowrap shrink-0"
-                      >
-                        Add Wholesale Case to Bag
-                      </button>
                     </div>
-                  )}
-                </div>
-              )}
-
-              {/* Affiliate Creator Referral Hub */}
-              {currentUser.role === 'affiliate' &&
-                hasAccountPermission(currentUser, 'affiliate:referrals') && (
-                  <div className="bg-white rounded-2xl p-5 border border-[#384A22]/12 space-y-3">
-                    <h4 className="text-base font-bold text-[#384A22] flex items-center gap-2">
-                      <Award className="w-5 h-5 text-[#8B6D3B]" />
-                      <span>Affiliate Creator Referral Hub (Gift $20, Get $20)</span>
-                    </h4>
-                    <p className="text-xs text-[#384A22]/75">
-                      Share your personal Kampot Harvest referral code with your audience to
-                      grant 15% off and earn 20% commission on every referred order.
-                    </p>
-                    <div className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-[#F2F0E3]">
-                      <span className="font-mono font-bold text-sm text-[#384A22] tabular-nums">
-                        {currentUser.referralCode || 'KH-REF-VIP1001'}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (navigator.clipboard && currentUser.referralCode) {
-                            void navigator.clipboard.writeText(currentUser.referralCode);
-                          }
-                          setCopiedCode(true);
-                          window.setTimeout(() => setCopiedCode(false), 2000);
-                        }}
-                        className="px-4 py-1.5 rounded-lg bg-[#384A22] text-[#F2F0E3] text-xs font-semibold cursor-pointer whitespace-nowrap"
-                      >
-                        {copiedCode ? 'Copied ✓' : 'Copy Referral Code'}
-                      </button>
-                    </div>
-                  </div>
+                    <span className="text-xs font-bold text-[#9AB87A]">Open →</span>
+                  </button>
                 )}
 
-              {/* Quick Member Actions */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => {
                     onApplyVipDiscount();
                     onClose();
                   }}
-                  className="p-4 rounded-2xl bg-white border border-[#384A22]/12 hover:border-[#384A22]/40 text-left transition-colors cursor-pointer"
+                  className="w-full p-4 rounded-2xl bg-[#F2F0E3]/70 hover:bg-[#F2F0E3] flex items-center justify-between transition-colors cursor-pointer text-left"
                 >
-                  <Sparkles className="w-5 h-5 text-[#8B6D3B] mb-1.5" />
-                  <span className="text-sm font-bold text-[#384A22] block">
-                    Apply 15% VIP Discount
-                  </span>
-                  <span className="text-xs text-[#384A22]/70">
-                    Activate code {currentUser.discountCode} in bag
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <Sparkles className="w-5 h-5 text-[#8B6D3B]" />
+                    <div>
+                      <span className="text-sm font-bold text-[#384A22] block">
+                        15% VIP Discount ({currentUser.discountCode})
+                      </span>
+                      <span className="text-xs text-[#384A22]/70">
+                        Apply to your shopping bag
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-[#8B6D3B]">Apply →</span>
                 </button>
 
                 <button
@@ -517,15 +373,20 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     onClose();
                     onNavigateAutoship();
                   }}
-                  className="p-4 rounded-2xl bg-white border border-[#384A22]/12 hover:border-[#384A22]/40 text-left transition-colors cursor-pointer"
+                  className="w-full p-4 rounded-2xl bg-[#F2F0E3]/70 hover:bg-[#F2F0E3] flex items-center justify-between transition-colors cursor-pointer text-left"
                 >
-                  <ShieldCheck className="w-5 h-5 text-[#384A22] mb-1.5" />
-                  <span className="text-sm font-bold text-[#384A22] block">
-                    Manage Autoship &amp; Save
-                  </span>
-                  <span className="text-xs text-[#384A22]/70">
-                    Configure monthly jar deliveries
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <ShieldCheck className="w-5 h-5 text-[#384A22]" />
+                    <div>
+                      <span className="text-sm font-bold text-[#384A22] block">
+                        Autoship &amp; Save
+                      </span>
+                      <span className="text-xs text-[#384A22]/70">
+                        Manage recurring jar deliveries
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-[#384A22]">Open →</span>
                 </button>
 
                 <button
@@ -534,255 +395,141 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     onClose();
                     onOpenTrackOrder();
                   }}
-                  className="p-4 rounded-2xl bg-white border border-[#384A22]/12 hover:border-[#384A22]/40 text-left transition-colors cursor-pointer"
+                  className="w-full p-4 rounded-2xl bg-[#F2F0E3]/70 hover:bg-[#F2F0E3] flex items-center justify-between transition-colors cursor-pointer text-left"
                 >
-                  <Truck className="w-5 h-5 text-[#8B6D3B] mb-1.5" />
-                  <span className="text-sm font-bold text-[#384A22] block">
-                    Track My Orders
-                  </span>
-                  <span className="text-xs text-[#384A22]/70">
-                    Check live Kampot roastery status
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <Truck className="w-5 h-5 text-[#8B6D3B]" />
+                    <div>
+                      <span className="text-sm font-bold text-[#384A22] block">
+                        Track Order Status
+                      </span>
+                      <span className="text-xs text-[#384A22]/70">
+                        Check live delivery progress
+                      </span>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-[#384A22]">Track →</span>
                 </button>
               </div>
 
-              {/* Sign Out Footer */}
-              <div className="pt-3 border-t border-[#384A22]/12 flex items-center justify-between">
-                <span className="text-xs text-[#384A22]/65">
-                  Checkout forms automatically pre-fill with your saved profile details.
+              <div className="pt-4 border-t border-[#384A22]/10 flex items-center justify-between">
+                <span className="text-xs text-[#384A22]/60">
+                  Delivery address &amp; phone are asked only at checkout.
                 </span>
                 <button
                   type="button"
                   onClick={onLogout}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#B83A2A]/40 text-[#B83A2A] hover:bg-[#B83A2A]/10 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#B83A2A]/35 text-[#B83A2A] hover:bg-[#B83A2A]/10 text-xs font-semibold cursor-pointer"
                 >
-                  <LogOut className="w-4 h-4" />
+                  <LogOut className="w-3.5 h-3.5" />
                   <span>Sign Out</span>
                 </button>
               </div>
             </div>
           ) : (
             /* ================================================================
-             * REGISTRATION & LOGIN FORMS
+             * SIMPLE FULL-SCREEN SIGN IN / CREATE ACCOUNT FORM (NO ACCOUNT TYPE)
              * ============================================================== */
-            <div className="space-y-6">
-              {/* Segmented Tab Switcher: Create Account | Sign In */}
-              <div className="flex p-1 bg-[#E5E2CE] rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setAuthTab('register');
-                    setGeneralError(null);
-                  }}
-                  className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
-                    authTab === 'register'
-                      ? 'bg-[#384A22] text-[#F2F0E3] shadow-xs'
-                      : 'text-[#384A22] hover:text-[#384A22]/80'
-                  }`}
-                >
-                  Create Account
-                </button>
+            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#384A22]/12 shadow-sm space-y-6">
+              <div className="text-center space-y-1">
+                <h1 className="text-2xl font-bold text-[#384A22]">
+                  {authTab === 'login' ? 'Sign In' : 'Create Account'}
+                </h1>
+                <p className="text-xs text-[#384A22]/70">
+                  {authTab === 'login'
+                    ? 'Sign in to access your 15% VIP discount and Autoship perks.'
+                    : 'Quick sign-up — delivery address and phone are only asked when you order.'}
+                </p>
+              </div>
+
+              {/* Simple Tab Toggle */}
+              <div className="flex p-1 bg-[#F2F0E3] rounded-xl">
                 <button
                   type="button"
                   onClick={() => {
                     setAuthTab('login');
                     setGeneralError(null);
                   }}
-                  className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer whitespace-nowrap ${
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
                     authTab === 'login'
-                      ? 'bg-[#384A22] text-[#F2F0E3] shadow-xs'
+                      ? 'bg-[#384A22] text-[#F2F0E3]'
                       : 'text-[#384A22] hover:text-[#384A22]/80'
                   }`}
                 >
                   Sign In
                 </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthTab('register');
+                    setGeneralError(null);
+                  }}
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-lg transition-colors cursor-pointer ${
+                    authTab === 'register'
+                      ? 'bg-[#384A22] text-[#F2F0E3]'
+                      : 'text-[#384A22] hover:text-[#384A22]/80'
+                  }`}
+                >
+                  Create Account
+                </button>
               </div>
 
               {authTab === 'register' ? (
                 <form onSubmit={handleRegisterSubmit} className="space-y-4" noValidate>
-                  {/* Account Role Selector */}
+                  {/* Full Name */}
                   <div>
-                    <span className="block text-xs font-bold uppercase tracking-wider text-[#384A22]/80 mb-2">
-                      Select Account Type *
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                      {(
-                        [
-                          {
-                            id: 'customer',
-                            title: 'VIP Customer',
-                            sub: '15% off + Autoship perks',
-                          },
-                          {
-                            id: 'wholesale',
-                            title: 'Wholesale Partner',
-                            sub: 'B2B bulk case pricing',
-                          },
-                          {
-                            id: 'affiliate',
-                            title: 'Affiliate Creator',
-                            sub: 'Referral code & rewards',
-                          },
-                        ] as const
-                      ).map((roleOption) => {
-                        const isSelected = regForm.role === roleOption.id;
-                        return (
-                          <button
-                            key={roleOption.id}
-                            type="button"
-                            onClick={() => {
-                              setRegForm({ ...regForm, role: roleOption.id });
-                              setFieldErrors((prev) => ({ ...prev, companyName: undefined }));
-                            }}
-                            className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-[#384A22] text-[#F2F0E3] border-[#384A22]'
-                                : 'bg-white text-[#384A22] border-[#384A22]/20 hover:border-[#384A22]/50'
-                            }`}
-                          >
-                            <span className="text-xs font-bold block">{roleOption.title}</span>
-                            <span
-                              className={`text-[11px] block mt-0.5 ${
-                                isSelected ? 'text-[#F2F0E3]/80' : 'text-[#384A22]/65'
-                              }`}
-                            >
-                              {roleOption.sub}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <label
+                      htmlFor="acc-full-name"
+                      className="block text-xs font-bold uppercase mb-1"
+                    >
+                      {t('form_full_name', 'Full Name')} *
+                    </label>
+                    <input
+                      id="acc-full-name"
+                      type="text"
+                      value={regForm.fullName}
+                      onChange={(e) => {
+                        setRegForm({ ...regForm, fullName: e.target.value });
+                        if (fieldErrors.fullName) {
+                          setFieldErrors({ ...fieldErrors, fullName: undefined });
+                        }
+                      }}
+                      placeholder="e.g. Dara Pich"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                    />
+                    {fieldErrors.fullName && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.fullName}</p>
+                    )}
                   </div>
 
-                  {/* Full Name & Email */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="acc-full-name"
-                        className="block text-xs font-bold uppercase mb-1"
-                      >
-                        {t('form_full_name', 'Full Name')} *
-                      </label>
-                      <input
-                        id="acc-full-name"
-                        type="text"
-                        value={regForm.fullName}
-                        onChange={(e) => {
-                          setRegForm({ ...regForm, fullName: e.target.value });
-                          if (fieldErrors.fullName) {
-                            setFieldErrors({ ...fieldErrors, fullName: undefined });
-                          }
-                        }}
-                        placeholder="e.g. Dara Pich"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                      />
-                      {fieldErrors.fullName && (
-                        <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.fullName}</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label
-                        htmlFor="acc-email"
-                        className="block text-xs font-bold uppercase mb-1"
-                      >
-                        {t('form_email', 'Email Address')} *
-                      </label>
-                      <input
-                        id="acc-email"
-                        type="email"
-                        value={regForm.email}
-                        onChange={(e) => {
-                          setRegForm({ ...regForm, email: e.target.value });
-                          if (fieldErrors.email) {
-                            setFieldErrors({ ...fieldErrors, email: undefined });
-                          }
-                        }}
-                        placeholder="you@example.com"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                      />
-                      {fieldErrors.email && (
-                        <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.email}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Phone & Conditional Wholesale Company Name */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label
-                        htmlFor="acc-phone"
-                        className="block text-xs font-bold uppercase mb-1"
-                      >
-                        {t('form_phone', 'Phone Number')} *
-                      </label>
-                      <input
-                        id="acc-phone"
-                        type="tel"
-                        value={regForm.phone}
-                        onChange={(e) => {
-                          setRegForm({ ...regForm, phone: e.target.value });
-                          if (fieldErrors.phone) {
-                            setFieldErrors({ ...fieldErrors, phone: undefined });
-                          }
-                        }}
-                        placeholder="+855 12 345 678"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                      />
-                      {fieldErrors.phone && (
-                        <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.phone}</p>
-                      )}
-                    </div>
-
-                    {regForm.role === 'wholesale' ? (
-                      <div>
-                        <label
-                          htmlFor="acc-company"
-                          className="block text-xs font-bold uppercase mb-1"
-                        >
-                          Business / Company Name *
-                        </label>
-                        <input
-                          id="acc-company"
-                          type="text"
-                          value={regForm.companyName || ''}
-                          onChange={(e) => {
-                            setRegForm({ ...regForm, companyName: e.target.value });
-                            if (fieldErrors.companyName) {
-                              setFieldErrors({ ...fieldErrors, companyName: undefined });
-                            }
-                          }}
-                          placeholder="e.g. Mekong Organic Grocers"
-                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                        />
-                        {fieldErrors.companyName && (
-                          <p className="text-xs text-[#B83A2A] mt-1">
-                            {fieldErrors.companyName}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div>
-                        <label
-                          htmlFor="acc-city"
-                          className="block text-xs font-bold uppercase mb-1"
-                        >
-                          City (Optional)
-                        </label>
-                        <input
-                          id="acc-city"
-                          type="text"
-                          value={regForm.city || ''}
-                          onChange={(e) => setRegForm({ ...regForm, city: e.target.value })}
-                          placeholder="e.g. Phnom Penh, Siem Reap"
-                          className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                        />
-                      </div>
+                  {/* Email Address */}
+                  <div>
+                    <label
+                      htmlFor="acc-email"
+                      className="block text-xs font-bold uppercase mb-1"
+                    >
+                      {t('form_email', 'Email Address')} *
+                    </label>
+                    <input
+                      id="acc-email"
+                      type="email"
+                      value={regForm.email}
+                      onChange={(e) => {
+                        setRegForm({ ...regForm, email: e.target.value });
+                        if (fieldErrors.email) {
+                          setFieldErrors({ ...fieldErrors, email: undefined });
+                        }
+                      }}
+                      placeholder="you@example.com"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
+                    />
+                    {fieldErrors.email && (
+                      <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.email}</p>
                     )}
                   </div>
 
                   {/* Password & Confirm Password */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label
                         htmlFor="acc-password"
@@ -800,8 +547,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                             setFieldErrors({ ...fieldErrors, password: undefined });
                           }
                         }}
-                        placeholder="Min. 8 chars (letter & number)"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                        placeholder="Min. 8 chars"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
                       />
                       {fieldErrors.password && (
                         <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.password}</p>
@@ -825,8 +572,8 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                             setFieldErrors({ ...fieldErrors, confirmPassword: undefined });
                           }
                         }}
-                        placeholder="Re-enter password"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                        placeholder="Repeat password"
+                        className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
                       />
                       {fieldErrors.confirmPassword && (
                         <p className="text-xs text-[#B83A2A] mt-1">
@@ -836,62 +583,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     </div>
                   </div>
 
-                  {/* Optional Delivery Address & Postal Code */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div className="sm:col-span-2">
-                      <label
-                        htmlFor="acc-address"
-                        className="block text-xs font-bold uppercase mb-1"
-                      >
-                        Delivery Address (Optional)
-                      </label>
-                      <input
-                        id="acc-address"
-                        type="text"
-                        value={regForm.address || ''}
-                        onChange={(e) => setRegForm({ ...regForm, address: e.target.value })}
-                        placeholder="Street, Sangkat / District"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
-                      />
-                    </div>
-                    <div>
-                      <label
-                        htmlFor="acc-postal"
-                        className="block text-xs font-bold uppercase mb-1"
-                      >
-                        Postal Code (Optional)
-                      </label>
-                      <input
-                        id="acc-postal"
-                        type="text"
-                        value={regForm.postalCode || ''}
-                        onChange={(e) => {
-                          setRegForm({ ...regForm, postalCode: e.target.value });
-                          if (fieldErrors.postalCode) {
-                            setFieldErrors({ ...fieldErrors, postalCode: undefined });
-                          }
-                        }}
-                        placeholder="12000"
-                        className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22] tabular-nums"
-                      />
-                      {fieldErrors.postalCode && (
-                        <p className="text-xs text-[#B83A2A] mt-1">{fieldErrors.postalCode}</p>
-                      )}
-                    </div>
-                  </div>
-
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
+                    className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-sm transition-colors cursor-pointer"
                   >
-                    {isSubmitting
-                      ? 'Creating Account...'
-                      : regForm.role === 'wholesale'
-                      ? 'Register Wholesale Partner Account'
-                      : regForm.role === 'affiliate'
-                      ? 'Create Affiliate Partner Account'
-                      : 'Create VIP Account & Unlock 15% Off'}
+                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
                   </button>
                 </form>
               ) : (
@@ -909,7 +606,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={loginEmail}
                       onChange={(e) => setLoginEmail(e.target.value)}
                       placeholder="sokha.chan@example.com"
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
                     />
                   </div>
 
@@ -926,29 +623,44 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       value={loginPassword}
                       onChange={(e) => setLoginPassword(e.target.value)}
                       placeholder="Enter your password"
-                      className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-sm focus:outline-none focus:border-[#384A22]"
+                      className="w-full px-4 py-2.5 rounded-xl bg-[#F2F0E3]/40 border border-[#384A22]/20 text-sm focus:outline-none focus:border-[#384A22]"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-[#384A22]/75">
-                    <span>Demo member account available:</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setLoginEmail('sokha.chan@example.com');
-                        setLoginPassword('Password123');
-                        setGeneralError(null);
-                      }}
-                      className="font-semibold text-[#8B6D3B] underline cursor-pointer"
-                    >
-                      Fill Demo Credentials
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#384A22]/70">
+                    <span>Demo accounts:</span>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        data-testid="fill-user-demo-btn"
+                        onClick={() => {
+                          setLoginEmail('sokha.chan@example.com');
+                          setLoginPassword('Password123');
+                          setGeneralError(null);
+                        }}
+                        className="font-semibold text-[#8B6D3B] underline cursor-pointer"
+                      >
+                        Normal User Demo
+                      </button>
+                      <button
+                        type="button"
+                        data-testid="fill-admin-demo-btn"
+                        onClick={() => {
+                          setLoginEmail('admin@kampotharvest.com');
+                          setLoginPassword('AdminHarvest2026');
+                          setGeneralError(null);
+                        }}
+                        className="font-semibold text-[#384A22] underline cursor-pointer"
+                      >
+                        Admin Demo
+                      </button>
+                    </div>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-3.5 rounded-full bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-md transition-colors cursor-pointer"
+                    className="w-full py-3.5 rounded-full bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-sm transition-colors cursor-pointer"
                   >
                     {isSubmitting ? 'Signing In...' : 'Sign In'}
                   </button>

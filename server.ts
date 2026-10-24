@@ -15,6 +15,15 @@ import {
   AccountRegistrationInput,
   createUserAccount,
   verifyUserAccount,
+  getRolePermissions,
+  isAdminAccount,
+  migrateAccountRecord,
+  InventoryItem,
+  StockMovementRecord,
+  createInitialInventory,
+  calculateInventoryStats,
+  applyInventoryOrderDeduction,
+  adjustInventoryStock,
 } from './src/utils/storeLogic.ts';
 
 dotenv.config();
@@ -66,30 +75,96 @@ function verifyPasswordHash(password: string, salt: string, expectedHash: string
   return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(expectedHash, 'hex'));
 }
 
-const seedPassword = hashPassword('Password123');
+const seedUserPassword = hashPassword('Password123');
+const seedAdminPassword = hashPassword(process.env.ADMIN_PASSWORD || 'AdminHarvest2026');
+const seedAdminEmail = (process.env.ADMIN_EMAIL || 'admin@kampotharvest.com').trim().toLowerCase();
+
 const storedAccounts: StoredUserRecord[] = [
   {
     account: {
+      accountId: 'KH-ADM-0001',
+      fullName: 'Kampot Harvest Admin',
+      email: seedAdminEmail,
+      phone: '+855 12 888 001',
+      role: 'admin',
+      status: 'active',
+      verified: true,
+      permissions: getRolePermissions('admin', 'active'),
+      address: 'Kampot Solar Roastery HQ',
+      city: 'Kampot',
+      postalCode: '07000',
+      discountCode: 'HARVEST15',
+      createdAt: '2026-10-01T08:00:00.000Z',
+    },
+    passwordSalt: seedAdminPassword.salt,
+    passwordHash: seedAdminPassword.hash,
+  },
+  {
+    account: migrateAccountRecord({
       accountId: 'KH-USR-1001',
       fullName: 'Sokha Chan',
       email: 'sokha.chan@example.com',
       phone: '+855 12 345 678',
-      role: 'customer',
+      role: 'user',
       status: 'active',
       verified: true,
-      permissions: ['store:shop', 'vip:first_order_discount', 'autoship:manage', 'orders:track'],
+      permissions: getRolePermissions('user', 'active'),
       address: 'Street 240, Daun Penh',
       city: 'Phnom Penh',
       postalCode: '12000',
       discountCode: 'HARVEST15',
       createdAt: '2026-10-15T08:00:00.000Z',
-    },
-    passwordSalt: seedPassword.salt,
-    passwordHash: seedPassword.hash,
+    }),
+    passwordSalt: seedUserPassword.salt,
+    passwordHash: seedUserPassword.hash,
   },
 ];
 
 const activeSessions = new Map<string, string>(); // token -> accountId
+
+// Live Business Inventory & Stock Movements Store
+let inventoryItems: InventoryItem[] = createInitialInventory();
+const stockMovements: StockMovementRecord[] = [
+  {
+    movementId: 'MOV-2026-1001',
+    itemId: 'honey-butter-250g-jar',
+    sku: 'KH-HB-250J',
+    productName: 'Artisan Roasted Cashews — Honey Butter (250g Jar)',
+    type: 'restock',
+    quantityDelta: 50,
+    resultingStock: 62,
+    reason: 'Kampot Solar Roastery Batch #KH-408',
+    timestamp: '2026-10-22T16:40:00.000Z',
+  },
+  {
+    movementId: 'MOV-2026-1002',
+    itemId: 'honey-butter-100g-pouch',
+    sku: 'KH-HB-100P',
+    productName: 'Artisan Roasted Cashews — Honey Butter (100g Pouch)',
+    type: 'sale',
+    quantityDelta: -2,
+    resultingStock: 84,
+    reason: 'Completed Order KH-2026-1042',
+    timestamp: '2026-10-22T09:15:00.000Z',
+  },
+];
+
+function getAuthenticatedAccount(req: Request): UserAccount | null {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.slice(7).trim();
+  const accountId = activeSessions.get(token);
+  if (!accountId) {
+    return null;
+  }
+  const record = storedAccounts.find((r) => r.account.accountId === accountId);
+  if (!record || record.account.status === 'suspended') {
+    return null;
+  }
+  return record.account;
+}
 
 let genAI: GoogleGenAI | null = null;
 if (process.env.GEMINI_API_KEY) {
@@ -233,6 +308,13 @@ app.post('/api/orders', (req: Request, res: Response) => {
 
   orders.unshift(newOrder);
 
+  // Automatically deduct ordered quantities from live inventory
+  const deduction = applyInventoryOrderDeduction(inventoryItems, items, orderId);
+  inventoryItems = deduction.updatedInventory;
+  if (deduction.movements.length > 0) {
+    stockMovements.unshift(...deduction.movements);
+  }
+
   res.status(201).json({
     success: true,
     message: 'Order placed successfully!',
@@ -372,7 +454,21 @@ app.post('/api/feedback', (req: Request, res: Response) => {
 // ----------------- User Account & Authentication Endpoints -----------------
 
 app.post('/api/auth/register', (req: Request, res: Response) => {
-  const input = req.body as AccountRegistrationInput;
+  const rawInput = req.body as AccountRegistrationInput;
+
+  // Security: Reject any attempt to self-assign admin role via registration API
+  if (rawInput?.role === 'admin') {
+    return res.status(403).json({
+      success: false,
+      error: 'Admin role cannot be assigned through public registration',
+      fieldErrors: { role: 'Admin role cannot be assigned through public registration' },
+    });
+  }
+
+  const input: AccountRegistrationInput = {
+    ...rawInput,
+    role: 'user',
+  };
   const existingUsers = storedAccounts.map((r) => r.account);
 
   const creation = createUserAccount(input, existingUsers);
@@ -405,12 +501,94 @@ app.post('/api/auth/register', (req: Request, res: Response) => {
 
   return res.status(201).json({
     success: true,
-    message:
-      creation.account.status === 'pending_verification'
-        ? 'Wholesale partner account created! Complete business verification to unlock bulk ordering.'
-        : 'Welcome to Kampot Harvest! Your account is active and 15% VIP discount is unlocked.',
+    message: 'Welcome to Kampot Harvest! Your account is active and 15% VIP discount is unlocked.',
     account: creation.account,
     token,
+  });
+});
+
+// ----------------- Protected Admin Inventory Endpoints -----------------
+
+app.get('/api/admin/inventory', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required. Please sign in with an administrator account.',
+    });
+  }
+  if (!isAdminAccount(account)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only authorized administrators can access business inventory.',
+    });
+  }
+
+  const stats = calculateInventoryStats(inventoryItems);
+  return res.json({
+    success: true,
+    inventory: inventoryItems,
+    stats,
+    movements: stockMovements.slice(0, 25),
+  });
+});
+
+app.post('/api/admin/inventory/adjust', (req: Request, res: Response) => {
+  const account = getAuthenticatedAccount(req);
+  if (!account) {
+    return res.status(401).json({
+      success: false,
+      error: 'Authentication required. Please sign in with an administrator account.',
+    });
+  }
+  if (!isAdminAccount(account)) {
+    return res.status(403).json({
+      success: false,
+      error: 'Forbidden: Only authorized administrators can modify business inventory.',
+    });
+  }
+
+  const { itemId, quantityDelta, type, reason } = req.body as {
+    itemId?: string;
+    quantityDelta?: number;
+    type?: 'restock' | 'return' | 'adjustment';
+    reason?: string;
+  };
+
+  if (!itemId || quantityDelta === undefined) {
+    return res.status(400).json({
+      success: false,
+      error: 'itemId and quantityDelta are required',
+    });
+  }
+
+  const result = adjustInventoryStock(
+    inventoryItems,
+    itemId,
+    Number(quantityDelta),
+    type || 'adjustment',
+    reason || `Adjusted by ${account.fullName}`
+  );
+
+  if (!result.success) {
+    return res.status(400).json({
+      success: false,
+      error: result.error || 'Failed to adjust inventory',
+    });
+  }
+
+  inventoryItems = result.updatedInventory;
+  if (result.movement) {
+    stockMovements.unshift(result.movement);
+  }
+
+  return res.json({
+    success: true,
+    message: `Inventory updated for ${result.updatedItem?.name}`,
+    item: result.updatedItem,
+    inventory: inventoryItems,
+    stats: calculateInventoryStats(inventoryItems),
+    movements: stockMovements.slice(0, 25),
   });
 });
 

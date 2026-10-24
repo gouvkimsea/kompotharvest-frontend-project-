@@ -17,6 +17,7 @@ import {
 } from './components/SubpagesAndModals';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { AccountModal } from './components/AccountModal';
+import { AdminInventoryDashboard } from './components/AdminInventoryDashboard';
 import { ASSETS, BundleItem, Product, RecipeItem } from './data/botenzData';
 import {
   CartItem,
@@ -24,6 +25,7 @@ import {
   UserAccount,
   AccountRole,
   hasAccountPermission,
+  isAdminAccount,
 } from './utils/storeLogic';
 import { useI18n } from './utils/i18nContext';
 
@@ -72,6 +74,17 @@ export default function App() {
       setShopCategory(categoryFilter);
     }
   };
+
+  React.useEffect(() => {
+    const syncHashRoute = () => {
+      if (window.location.hash === '#admin' || window.location.hash === '#inventory') {
+        setActivePage('admin_inventory');
+      }
+    };
+    syncHashRoute();
+    window.addEventListener('hashchange', syncHashRoute);
+    return () => window.removeEventListener('hashchange', syncHashRoute);
+  }, []);
 
   const handleAddProductToCart = (
     product: Product,
@@ -176,6 +189,7 @@ export default function App() {
         onOpenCart={() => setIsCartOpen(true)}
         onOpenDiscountModal={() => setIsFirstOrderModalOpen(true)}
         currentUserName={currentUser?.fullName || null}
+        isAdmin={isAdminAccount(currentUser)}
         onOpenAccountModal={() => {
           setAccountModalMode('register');
           setAccountModalRole('customer');
@@ -255,6 +269,30 @@ export default function App() {
               setAccountModalMode('register');
               setAccountModalRole('customer');
               setIsAccountModalOpen(true);
+            }}
+          />
+        )}
+
+        {activePage === 'admin_inventory' && (
+          <AdminInventoryDashboard
+            currentUser={currentUser}
+            authToken={authToken}
+            onBackToStore={() => handleNavigate('home')}
+            onOpenSignIn={() => {
+              setAccountModalMode('login');
+              setIsAccountModalOpen(true);
+            }}
+            onLogout={() => {
+              if (authToken) {
+                void fetch('/api/auth/logout', {
+                  method: 'POST',
+                  headers: { Authorization: `Bearer ${authToken}` },
+                }).catch(() => {});
+              }
+              setCurrentUser(null);
+              setAuthToken(null);
+              setActivePage('home');
+              showToast('Signed out of administrator session.');
             }}
           />
         )}
@@ -379,7 +417,15 @@ export default function App() {
           if (hasAccountPermission(account, 'vip:first_order_discount')) {
             setPromoCodeActive(true);
           }
-          showToast(`Signed in as ${account.fullName} (${account.role})`);
+          // Role-based login redirection: Admin -> Admin Inventory Dashboard; User -> Normal User Dashboard
+          if (isAdminAccount(account)) {
+            setIsAccountModalOpen(false);
+            setActivePage('admin_inventory');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            showToast(`Welcome Admin (${account.fullName}) — Redirected to Inventory Overview`);
+          } else {
+            showToast(`Signed in as ${account.fullName}`);
+          }
         }}
         onLogout={() => {
           if (authToken) {
@@ -391,6 +437,9 @@ export default function App() {
           setCurrentUser(null);
           setAuthToken(null);
           setIsAccountModalOpen(false);
+          if (activePage === 'admin_inventory') {
+            setActivePage('home');
+          }
           showToast('Signed out of your Kampot Harvest account.');
         }}
         onApplyVipDiscount={() => {
@@ -403,6 +452,10 @@ export default function App() {
         }}
         onNavigateAutoship={() => {
           handleNavigate('autoship');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }}
+        onNavigateAdminInventory={() => {
+          handleNavigate('admin_inventory');
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }}
         onAddWholesaleCaseToCart={() => {

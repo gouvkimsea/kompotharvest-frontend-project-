@@ -462,7 +462,7 @@ export function lookupOrderStatus(
  * USER ACCOUNT CREATION, ROLES, PERMISSIONS & AUTHENTICATION LOGIC
  * ========================================================================== */
 
-export type AccountRole = 'customer' | 'wholesale' | 'affiliate';
+export type AccountRole = 'admin' | 'user' | 'customer' | 'wholesale' | 'affiliate';
 export type AccountStatus = 'active' | 'pending_verification' | 'suspended';
 export type AccountPermission =
   | 'store:shop'
@@ -470,15 +470,17 @@ export type AccountPermission =
   | 'autoship:manage'
   | 'orders:track'
   | 'affiliate:referrals'
-  | 'wholesale:bulk_order';
+  | 'wholesale:bulk_order'
+  | 'admin:inventory'
+  | 'admin:dashboard';
 
 export interface AccountRegistrationInput {
   fullName: string;
   email: string;
-  phone: string;
+  phone?: string;
   password: string;
   confirmPassword: string;
-  role: AccountRole;
+  role?: AccountRole;
   companyName?: string;
   address?: string;
   city?: string;
@@ -489,7 +491,7 @@ export interface UserAccount {
   accountId: string;
   fullName: string;
   email: string;
-  phone: string;
+  phone?: string;
   role: AccountRole;
   status: AccountStatus;
   verified: boolean;
@@ -523,6 +525,15 @@ export function getRolePermissions(
     'orders:track',
   ];
 
+  if (role === 'admin') {
+    return [
+      ...base,
+      'admin:inventory',
+      'admin:dashboard',
+      'wholesale:bulk_order',
+    ];
+  }
+
   if (role === 'affiliate') {
     return [...base, 'affiliate:referrals'];
   }
@@ -535,6 +546,32 @@ export function getRolePermissions(
   }
 
   return base;
+}
+
+export function isAdminAccount(account: UserAccount | null | undefined): boolean {
+  if (!account || account.status !== 'active') {
+    return false;
+  }
+  return (
+    account.role === 'admin' &&
+    account.permissions.includes('admin:inventory')
+  );
+}
+
+export function migrateAccountRecord(account: UserAccount): UserAccount {
+  // Preserve existing admin accounts; normalize standard customer accounts while preserving all data
+  const normalizedRole: AccountRole =
+    account.role === 'admin'
+      ? 'admin'
+      : account.role === 'wholesale' || account.role === 'affiliate'
+      ? account.role
+      : 'user';
+
+  return {
+    ...account,
+    role: normalizedRole,
+    permissions: getRolePermissions(normalizedRole, account.status),
+  };
 }
 
 export function validateAccountRegistration(
@@ -551,9 +588,12 @@ export function validateAccountRegistration(
     errors.email = 'Please enter a valid email address';
   }
 
-  const cleanPhone = (input.phone || '').replace(/\D/g, '');
-  if (cleanPhone.length < 10) {
-    errors.phone = 'Please enter a valid 10-digit phone number';
+  // Phone is optional at account registration (collected at checkout when ordering)
+  if (input.phone && input.phone.trim().length > 0) {
+    const cleanPhone = input.phone.replace(/\D/g, '');
+    if (cleanPhone.length < 9) {
+      errors.phone = 'Please enter a valid phone number';
+    }
   }
 
   if (!input.password || input.password.length < 8) {
@@ -568,14 +608,19 @@ export function validateAccountRegistration(
     errors.confirmPassword = 'Passwords do not match';
   }
 
-  const validRoles: AccountRole[] = ['customer', 'wholesale', 'affiliate'];
-  if (!input.role || !validRoles.includes(input.role)) {
-    errors.role = 'Please select a valid account type';
-  }
-
-  if (input.role === 'wholesale') {
-    if (!input.companyName || input.companyName.trim().length < 2) {
-      errors.companyName = 'Business or company name is required for Wholesale accounts';
+  // Security rule: Normal users can NEVER select or self-assign the 'admin' role during registration
+  if (input.role === 'admin') {
+    errors.role = 'Admin role cannot be assigned through public registration';
+  } else {
+    const resolvedRole: AccountRole = input.role || 'user';
+    const allowedPublicRoles: AccountRole[] = ['user', 'customer', 'wholesale', 'affiliate'];
+    if (!allowedPublicRoles.includes(resolvedRole)) {
+      errors.role = 'Please select a valid account type';
+    }
+    if (resolvedRole === 'wholesale') {
+      if (!input.companyName || input.companyName.trim().length < 2) {
+        errors.companyName = 'Business or company name is required for Wholesale accounts';
+      }
     }
   }
 
@@ -605,7 +650,7 @@ export function createUserAccount(
   if (!validation.valid) {
     return {
       success: false,
-      error: 'Please correct the highlighted fields.',
+      error: validation.errors.role || 'Please correct the highlighted fields.',
       fieldErrors: validation.errors,
     };
   }
@@ -624,11 +669,13 @@ export function createUserAccount(
     };
   }
 
-  // Wholesale accounts start in pending_verification status until business is verified
+  // Enforce non-admin role on public account creation
+  const resolvedRole: AccountRole =
+    input.role && input.role !== 'admin' ? input.role : 'user';
   const initialStatus: AccountStatus =
-    input.role === 'wholesale' ? 'pending_verification' : 'active';
+    resolvedRole === 'wholesale' ? 'pending_verification' : 'active';
   const verified = initialStatus === 'active';
-  const permissions = getRolePermissions(input.role, initialStatus);
+  const permissions = getRolePermissions(resolvedRole, initialStatus);
 
   const suffix = String(1000 + existingAccounts.length + 1);
   const accountId = `KH-USR-${suffix}`;
@@ -642,13 +689,13 @@ export function createUserAccount(
     accountId,
     fullName: input.fullName.trim(),
     email: normalizedEmail,
-    phone: input.phone.trim(),
-    role: input.role,
+    phone: input.phone?.trim() || undefined,
+    role: resolvedRole,
     status: initialStatus,
     verified,
     permissions,
     companyName:
-      input.role === 'wholesale' && input.companyName
+      resolvedRole === 'wholesale' && input.companyName
         ? input.companyName.trim()
         : undefined,
     address: input.address?.trim() || undefined,
@@ -656,7 +703,7 @@ export function createUserAccount(
     postalCode: input.postalCode?.trim() || undefined,
     discountCode: 'HARVEST15',
     referralCode:
-      input.role === 'affiliate' ? `KH-REF-${cleanNameCode}${suffix}` : undefined,
+      resolvedRole === 'affiliate' ? `KH-REF-${cleanNameCode}${suffix}` : undefined,
     createdAt: new Date().toISOString(),
   };
 
@@ -688,5 +735,343 @@ export function hasAccountPermission(
   }
   return account.permissions.includes(permission);
 }
+
+/* ============================================================================
+ * BUSINESS INVENTORY MANAGEMENT & STOCK MOVEMENT LOGIC
+ * ========================================================================== */
+
+export type InventoryStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
+export type InventoryCategory =
+  | 'Single Pouches (100g)'
+  | 'Glass Jars (250g)'
+  | 'Value Bundles';
+
+export interface InventoryItem {
+  id: string;
+  sku: string;
+  barcode: string;
+  name: string;
+  variantLabel: string;
+  category: InventoryCategory;
+  price: number;
+  stockQuantity: number;
+  reorderThreshold: number;
+  status: InventoryStatus;
+  image: string;
+  lastUpdated: string;
+}
+
+export interface StockMovementRecord {
+  movementId: string;
+  itemId: string;
+  sku: string;
+  productName: string;
+  type: 'sale' | 'restock' | 'return' | 'adjustment';
+  quantityDelta: number;
+  resultingStock: number;
+  reason: string;
+  timestamp: string;
+}
+
+export interface InventoryStats {
+  totalProducts: number;
+  totalStockUnits: number;
+  inStockCount: number;
+  lowStockCount: number;
+  outOfStockCount: number;
+  totalInventoryValueUSD: number;
+}
+
+export function computeInventoryStatus(
+  stockQuantity: number,
+  reorderThreshold: number
+): InventoryStatus {
+  if (stockQuantity <= 0) {
+    return 'out_of_stock';
+  }
+  if (stockQuantity <= reorderThreshold) {
+    return 'low_stock';
+  }
+  return 'in_stock';
+}
+
+export function calculateInventoryStats(items: InventoryItem[]): InventoryStats {
+  // Deduplicate by item.id to prevent double-counting
+  const uniqueMap = new Map<string, InventoryItem>();
+  for (const item of items) {
+    if (!uniqueMap.has(item.id)) {
+      uniqueMap.set(item.id, item);
+    }
+  }
+  const uniqueItems = Array.from(uniqueMap.values());
+
+  let totalStockUnits = 0;
+  let inStockCount = 0;
+  let lowStockCount = 0;
+  let outOfStockCount = 0;
+  let totalInventoryValueUSD = 0;
+
+  for (const item of uniqueItems) {
+    const qty = Math.max(0, item.stockQuantity);
+    const status = computeInventoryStatus(qty, item.reorderThreshold);
+    totalStockUnits += qty;
+    totalInventoryValueUSD += Number((qty * item.price).toFixed(2));
+
+    if (status === 'out_of_stock') {
+      outOfStockCount += 1;
+    } else if (status === 'low_stock') {
+      lowStockCount += 1;
+    } else {
+      inStockCount += 1;
+    }
+  }
+
+  return {
+    totalProducts: uniqueItems.length,
+    totalStockUnits,
+    inStockCount,
+    lowStockCount,
+    outOfStockCount,
+    totalInventoryValueUSD: Number(totalInventoryValueUSD.toFixed(2)),
+  };
+}
+
+export function createInitialInventory(): InventoryItem[] {
+  const initialSeeds: Array<{
+    id: string;
+    sku: string;
+    barcode: string;
+    name: string;
+    variantLabel: string;
+    category: InventoryCategory;
+    price: number;
+    stockQuantity: number;
+    reorderThreshold: number;
+    image: string;
+  }> = [
+    {
+      id: 'honey-butter-100g-pouch',
+      sku: 'KH-HB-100P',
+      barcode: '8847102026011',
+      name: 'Artisan Roasted Cashews — Honey Butter (100g Pouch)',
+      variantLabel: 'Honey Butter · 100g Pouch',
+      category: 'Single Pouches (100g)',
+      price: 10.0,
+      stockQuantity: 84,
+      reorderThreshold: 20,
+      image: '/assets/aistudio/product-honey-butter-pouch-100g.png',
+    },
+    {
+      id: 'chili-lime-100g-pouch',
+      sku: 'KH-CL-100P',
+      barcode: '8847102026028',
+      name: 'Artisan Roasted Cashews — Chili Lime (100g Pouch)',
+      variantLabel: 'Chili Lime · 100g Pouch',
+      category: 'Single Pouches (100g)',
+      price: 10.0,
+      stockQuantity: 14,
+      reorderThreshold: 20,
+      image: '/assets/aistudio/product-chili-lime-pouch-100g.png',
+    },
+    {
+      id: 'honey-butter-250g-jar',
+      sku: 'KH-HB-250J',
+      barcode: '8847102026035',
+      name: 'Artisan Roasted Cashews — Honey Butter (250g Jar)',
+      variantLabel: 'Honey Butter · 250g Glass Jar',
+      category: 'Glass Jars (250g)',
+      price: 20.0,
+      stockQuantity: 62,
+      reorderThreshold: 15,
+      image: '/assets/aistudio/product-honey-butter-jar-250g.png',
+    },
+    {
+      id: 'chilli-lime-250g-jar',
+      sku: 'KH-CL-250J',
+      barcode: '8847102026042',
+      name: 'Artisan Roasted Cashews — Chili Lime (250g Jar)',
+      variantLabel: 'Chili Lime · 250g Glass Jar',
+      category: 'Glass Jars (250g)',
+      price: 20.0,
+      stockQuantity: 9,
+      reorderThreshold: 15,
+      image: '/assets/aistudio/product-chilli-lime-jar-250g.png',
+    },
+    {
+      id: 'bundle-complete',
+      sku: 'KH-BND-4PK',
+      barcode: '8847102026059',
+      name: 'The Complete Collection (4-Pack Tasting Bundle)',
+      variantLabel: '2× 250g Jars + 2× 100g Pouches',
+      category: 'Value Bundles',
+      price: 45.0,
+      stockQuantity: 28,
+      reorderThreshold: 10,
+      image: '/assets/aistudio/bundle-complete-4pack.png',
+    },
+    {
+      id: 'bundle-nut-lovers',
+      sku: 'KH-BND-250D',
+      barcode: '8847102026066',
+      name: 'Artisan 250g Jar Duo',
+      variantLabel: 'Honey Butter + Chili Lime (250g Jars)',
+      category: 'Value Bundles',
+      price: 30.0,
+      stockQuantity: 0,
+      reorderThreshold: 10,
+      image: '/assets/aistudio/bundle-jars-duo.png',
+    },
+    {
+      id: 'bundle-best-seller',
+      sku: 'KH-BND-100D',
+      barcode: '8847102026073',
+      name: 'Artisan 100g Pouch Duo',
+      variantLabel: 'Honey Butter + Chili Lime (100g Pouches)',
+      category: 'Value Bundles',
+      price: 15.0,
+      stockQuantity: 45,
+      reorderThreshold: 12,
+      image: '/assets/aistudio/bundle-pouches-duo.png',
+    },
+  ];
+
+  const timestamp = '2026-10-24T05:00:00.000Z';
+  return initialSeeds.map((seed) => ({
+    ...seed,
+    status: computeInventoryStatus(seed.stockQuantity, seed.reorderThreshold),
+    lastUpdated: timestamp,
+  }));
+}
+
+export function applyInventoryOrderDeduction(
+  inventory: InventoryItem[],
+  cartItems: CartItem[],
+  orderId = 'ORDER'
+): {
+  updatedInventory: InventoryItem[];
+  movements: StockMovementRecord[];
+} {
+  const now = new Date().toISOString();
+  const movements: StockMovementRecord[] = [];
+  const nextInventory = inventory.map((item) => ({ ...item }));
+
+  for (const cartItem of cartItems) {
+    const qtyToDeduct = Math.max(0, Number(cartItem.quantity) || 0);
+    if (qtyToDeduct <= 0) continue;
+
+    // Match by exact id or prefix id (for variant ids like honey-butter-100g-pouch__hb-pouch-100)
+    const baseId = cartItem.id.split('__')[0];
+    const target = nextInventory.find(
+      (inv) =>
+        inv.id === cartItem.id ||
+        inv.id === baseId ||
+        inv.name.toLowerCase() === cartItem.name.toLowerCase()
+    );
+
+    if (target) {
+      const previousStock = target.stockQuantity;
+      const newStock = Math.max(0, previousStock - qtyToDeduct);
+      const actualDeducted = previousStock - newStock;
+      target.stockQuantity = newStock;
+      target.status = computeInventoryStatus(newStock, target.reorderThreshold);
+      target.lastUpdated = now;
+
+      if (actualDeducted > 0) {
+        movements.push({
+          movementId: `MOV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+          itemId: target.id,
+          sku: target.sku,
+          productName: target.name,
+          type: 'sale',
+          quantityDelta: -actualDeducted,
+          resultingStock: newStock,
+          reason: `Completed Order ${orderId}`,
+          timestamp: now,
+        });
+      }
+    }
+  }
+
+  return {
+    updatedInventory: nextInventory,
+    movements,
+  };
+}
+
+export function adjustInventoryStock(
+  inventory: InventoryItem[],
+  itemId: string,
+  quantityDelta: number,
+  type: 'restock' | 'return' | 'adjustment' = 'adjustment',
+  reason = 'Admin inventory update'
+): {
+  success: boolean;
+  updatedInventory: InventoryItem[];
+  updatedItem?: InventoryItem;
+  movement?: StockMovementRecord;
+  error?: string;
+} {
+  const delta = Number(quantityDelta);
+  if (!Number.isFinite(delta) || delta === 0) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      error: 'Adjustment quantity must be a non-zero number',
+    };
+  }
+
+  const targetIndex = inventory.findIndex(
+    (item) => item.id === itemId || item.sku.toLowerCase() === itemId.toLowerCase()
+  );
+  if (targetIndex === -1) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      error: `Product ${itemId} not found in inventory`,
+    };
+  }
+
+  const currentItem = inventory[targetIndex];
+  const nextStock = currentItem.stockQuantity + delta;
+  if (nextStock < 0) {
+    return {
+      success: false,
+      updatedInventory: inventory,
+      error: `Cannot reduce stock below 0 (current stock: ${currentItem.stockQuantity})`,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const updatedItem: InventoryItem = {
+    ...currentItem,
+    stockQuantity: nextStock,
+    status: computeInventoryStatus(nextStock, currentItem.reorderThreshold),
+    lastUpdated: now,
+  };
+
+  const updatedInventory = inventory.map((item, idx) =>
+    idx === targetIndex ? updatedItem : item
+  );
+
+  const movement: StockMovementRecord = {
+    movementId: `MOV-${Date.now()}-${Math.floor(100 + Math.random() * 900)}`,
+    itemId: updatedItem.id,
+    sku: updatedItem.sku,
+    productName: updatedItem.name,
+    type,
+    quantityDelta: delta,
+    resultingStock: nextStock,
+    reason: reason.trim() || 'Admin stock adjustment',
+    timestamp: now,
+  };
+
+  return {
+    success: true,
+    updatedInventory,
+    updatedItem,
+    movement,
+  };
+}
+
 
 
