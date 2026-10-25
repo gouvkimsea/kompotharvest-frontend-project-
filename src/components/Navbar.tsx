@@ -72,7 +72,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAccountModal,
   onOpenAiSommelier,
 }) => {
-  const { language, setLanguage, currency, setCurrency, currencies, t, formatPrice } = useI18n();
+  const { language, setLanguage, t, formatPrice } = useI18n();
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
