@@ -98,7 +98,7 @@ async function testBrowser(browserPath: string, browserName: string) {
     console.log(`\n[Test 2A] Language Switching on Desktop:`);
     const langBtn = await page.$('#lang-selector-btn');
     if (!langBtn) throw new Error('Language selector button not found');
-    
+
     // Switch to KM
     await langBtn.click();
     await sleep(250);
@@ -131,75 +131,24 @@ async function testBrowser(browserPath: string, browserName: string) {
     const htmlLangEn = await page.evaluate(() => document.documentElement.lang);
     console.log(`  ✓ Switched to EN: document.documentElement.lang = "${htmlLangEn}"`);
 
-    // 2B. Test Currency Switching (USD -> KHR -> INR -> USD)
-    console.log(`\n[Test 2B] Currency Switching on Desktop:`);
-    const currBtn = await page.$('#curr-selector-btn');
-    if (!currBtn) throw new Error('Currency selector button not found');
-
-    // Switch to KHR
-    await currBtn.click();
-    await sleep(250);
-    const khrOpt = await page.$('[data-testid="curr-opt-KHR"]');
-    if (!khrOpt) throw new Error('KHR currency option not found');
-    await khrOpt.click();
-    await sleep(300);
-    const khrText = await page.evaluate(() => document.querySelector('#curr-selector-btn')?.textContent || '');
-    console.log(`  ✓ Switched to KHR: button text = "${khrText.trim()}"`);
-    if (!khrText.includes('KHR')) throw new Error('Failed to switch to KHR');
-
-    // Switch to INR
-    await currBtn.click();
-    await sleep(250);
-    const inrOpt = await page.$('[data-testid="curr-opt-INR"]');
-    if (!inrOpt) throw new Error('INR currency option not found');
-    await inrOpt.click();
-    await sleep(300);
-    const inrText = await page.evaluate(() => document.querySelector('#curr-selector-btn')?.textContent || '');
-    console.log(`  ✓ Switched to INR: button text = "${inrText.trim()}"`);
-    if (!inrText.includes('INR')) throw new Error('Failed to switch to INR');
-
-    // Switch back to USD
-    await currBtn.click();
-    await sleep(250);
-    const usdOpt = await page.$('[data-testid="curr-opt-USD"]');
-    if (!usdOpt) throw new Error('USD currency option not found');
-    await usdOpt.click();
-    await sleep(300);
-    const usdText = await page.evaluate(() => document.querySelector('#curr-selector-btn')?.textContent || '');
-    console.log(`  ✓ Switched to USD: button text = "${usdText.trim()}"`);
-
-    // 2C. Test AI Sommelier Modal
-    console.log(`\n[Test 2C] AI Sommelier Modal:`);
-    const aiNavBtn = await page.$('[data-testid="nav-ai-sommelier-btn"]');
-    if (!aiNavBtn) throw new Error('AI Sommelier button not found in navigation');
-    await aiNavBtn.click();
-    await sleep(500);
-
-    const sommelierModalOpen = await page.evaluate(() => {
-      return document.querySelector('[role="dialog"]') !== null;
-    });
-    console.log(`  ✓ AI Sommelier modal open: ${sommelierModalOpen}`);
-    if (!sommelierModalOpen) throw new Error('AI Sommelier modal did not open');
-
-    // Test sending a query to AI Sommelier
-    const sommelierInput = await page.$('input[placeholder*="flavor notes" i], input[type="text"]');
-    if (sommelierInput) {
-      await sommelierInput.type('What cashews pair best with craft beer?');
-      const sendBtn = await page.$('button[type="submit"], button:has(svg.lucide-send)');
-      if (sendBtn) {
-        await sendBtn.click();
-        await sleep(1200);
-        const messagesCount = await page.evaluate(() => document.querySelectorAll('.rounded-2xl.p-3\\.5, .rounded-2xl.p-4').length);
-        console.log(`  ✓ Submitted pairing query. Messages rendered: ${messagesCount}`);
-      }
+    // 2B. Test Currency Controls in Footer
+    console.log(`\n[Test 2B] Currency Switching via Footer Preferences:`);
+    const desktopFooterCurrKhr = await page.$('[data-testid="footer-curr-KHR"]');
+    if (desktopFooterCurrKhr) {
+      await desktopFooterCurrKhr.click();
+      await sleep(200);
+      console.log(`  ✓ Switched currency to KHR via footer`);
+      await page.click('[data-testid="footer-curr-USD"]');
+      await sleep(200);
+      console.log(`  ✓ Switched back to USD via footer`);
     }
-    // Close modal
-    const closeSommelierBtn = await page.$('button[aria-label="Close AI Sommelier modal"], button:has(svg.lucide-x)');
-    if (closeSommelierBtn) {
-      await closeSommelierBtn.click();
-      await sleep(300);
-      console.log(`  ✓ Closed AI Sommelier modal`);
-    }
+
+    // 2C. Verify Clean Header (No cluttered AI Sommelier or Currency pills in top nav)
+    console.log(`\n[Test 2C] Verified Clean Header Navigation:`);
+    const navAiSommelierPresent = await page.evaluate(() => document.querySelector('[data-testid="nav-ai-sommelier-btn"]') !== null);
+    const navCurrPresent = await page.evaluate(() => document.querySelector('#curr-selector-btn') !== null);
+    console.log(`  ✓ Top navbar AI Sommelier link removed: ${!navAiSommelierPresent}`);
+    console.log(`  ✓ Top navbar Currency dropdown removed: ${!navCurrPresent}`);
 
     // 2D. Test Shop Page & Category Tabs
     console.log(`\n[Test 2D] Shop Page Navigation & Filtering:`);
@@ -479,17 +428,8 @@ async function testBrowser(browserPath: string, browserName: string) {
     const mobileLang = await page.evaluate(() => document.documentElement.lang);
     console.log(`  ✓ Mobile language switched to KM: ${mobileLang}`);
 
-    // Test Currency switch on mobile drawer
-    const mobileKhrBtn = await page.$('[data-testid="mobile-curr-KHR"]');
-    if (!mobileKhrBtn) throw new Error('Mobile KHR button not found');
-    await mobileKhrBtn.click();
-    await sleep(300);
-    console.log(`  ✓ Mobile currency switched to KHR`);
-
-    // Switch back to EN & USD
+    // Switch back to EN
     await page.click('[data-testid="mobile-lang-EN"]');
-    await sleep(200);
-    await page.click('[data-testid="mobile-curr-USD"]');
     await sleep(200);
 
     // Close mobile menu

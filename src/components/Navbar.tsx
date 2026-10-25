@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Menu, X, ChevronDown, Globe, Sparkles } from 'lucide-react';
+import { Menu, X, ChevronDown, Globe } from 'lucide-react';
 import { ASSETS } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { useI18n, LANGUAGES, Language, Currency } from '../utils/i18nContext';
@@ -76,19 +76,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [currMenuOpen, setCurrMenuOpen] = useState(false);
   const closeTimeoutRef = useRef<number | null>(null);
   const langMenuRef = useRef<HTMLDivElement | null>(null);
-  const currMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
       const target = event.target as Node;
       if (langMenuRef.current && !langMenuRef.current.contains(target)) {
         setLangMenuOpen(false);
-      }
-      if (currMenuRef.current && !currMenuRef.current.contains(target)) {
-        setCurrMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -158,11 +153,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => handleNavClick('shop', 'powders')}
               aria-expanded={openDropdown === 'shop'}
-              className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
-                activePage === 'shop' || activePage === 'product_detail' || openDropdown === 'shop'
+              className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${activePage === 'shop' || activePage === 'product_detail' || openDropdown === 'shop'
                   ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                   : 'hover:text-[#768E5C]'
-              }`}
+                }`}
             >
               {t('nav_shop')}
             </button>
@@ -177,11 +171,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               onClick={() => handleNavClick('way')}
               aria-expanded={openDropdown === 'way'}
-              className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
-                activePage === 'way' || openDropdown === 'way'
+              className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${activePage === 'way' || openDropdown === 'way'
                   ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                   : 'hover:text-[#768E5C]'
-              }`}
+                }`}
             >
               {t('nav_way')}
             </button>
@@ -191,27 +184,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             type="button"
             onClick={() => handleNavClick('autoship')}
-            className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
-              activePage === 'autoship'
+            className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${activePage === 'autoship'
                 ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                 : 'hover:text-[#768E5C]'
-            }`}
+              }`}
           >
             {t('nav_autoship')}
           </button>
-
-          {/* AI Sommelier Navigation Item */}
-          {onOpenAiSommelier && (
-            <button
-              type="button"
-              data-testid="nav-ai-sommelier-btn"
-              onClick={onOpenAiSommelier}
-              className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0 pb-1 text-[#8B6D3B] hover:text-[#384A22] font-bold text-[14px] lg:text-[15px] transition-colors cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4 text-[#8B6D3B]" />
-              <span>{t('sommelier_title', 'AI Sommelier')}</span>
-            </button>
-          )}
 
           {/* Admin Inventory Link (Only visible to authenticated Admins) */}
           {isAdmin && (
@@ -219,11 +198,10 @@ export const Navbar: React.FC<NavbarProps> = ({
               type="button"
               data-testid="nav-admin-inventory-btn"
               onClick={() => handleNavClick('admin_inventory')}
-              className={`whitespace-nowrap shrink-0 pb-1 font-bold text-[#8B6D3B] transition-colors cursor-pointer ${
-                activePage === 'admin_inventory'
+              className={`whitespace-nowrap shrink-0 pb-1 font-bold text-[#8B6D3B] transition-colors cursor-pointer ${activePage === 'admin_inventory'
                   ? 'border-b-[1.5px] border-[#8B6D3B]'
                   : 'hover:text-[#384A22]'
-              }`}
+                }`}
             >
               {t('nav_inventory', 'Inventory')}
             </button>
@@ -248,9 +226,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="text-sm leading-none">{LANGUAGES[language].flag}</span>
               <span className="font-semibold">{language}</span>
               <ChevronDown
-                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${
-                  langMenuOpen ? 'rotate-180' : ''
-                }`}
+                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${langMenuOpen ? 'rotate-180' : ''
+                  }`}
               />
             </button>
 
@@ -277,77 +254,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                         setLanguage(langKey);
                         setLangMenuOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${
-                        isSelected
+                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${isSelected
                           ? 'bg-[#384A22] text-[#F2F0E3] font-bold'
                           : 'text-[#384A22] hover:bg-[#384A22]/10 font-medium'
-                      }`}
+                        }`}
                     >
                       <span className="flex items-center gap-2.5">
                         <span className="text-base leading-none">{item.flag}</span>
                         <span className={item.code === 'KM' ? 'font-khmer' : ''}>{item.nativeLabel}</span>
-                      </span>
-                      {isSelected && <span className="text-xs font-bold">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Currency Selector Dropdown (Desktop / Tablet) */}
-          <div className="relative hidden sm:block" ref={currMenuRef}>
-            <button
-              type="button"
-              id="curr-selector-btn"
-              data-testid="curr-selector-btn"
-              onClick={() => {
-                setCurrMenuOpen((prev) => !prev);
-              }}
-              aria-label={`Selected currency: ${currencies[currency]?.label || currency}. Click to switch.`}
-              aria-expanded={currMenuOpen}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#384A22]/10 hover:bg-[#384A22]/20 border border-[#384A22]/25 text-[#384A22] text-[13px] font-bold tracking-wide transition-all cursor-pointer select-none"
-            >
-              <span className="font-semibold">{currencies[currency]?.symbol} {currency}</span>
-              <ChevronDown
-                className={`w-3.5 h-3.5 text-[#384A22]/70 transition-transform duration-200 ${
-                  currMenuOpen ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-
-            {currMenuOpen && (
-              <div
-                role="menu"
-                aria-orientation="vertical"
-                aria-labelledby="curr-selector-btn"
-                className="absolute right-0 top-full mt-2 w-40 bg-[#F2F0E3] rounded-2xl shadow-2xl border border-[#384A22]/20 py-2 z-50 backdrop-blur-md overflow-hidden"
-              >
-                <div className="px-3.5 py-1 text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider border-b border-[#384A22]/10 mb-1">
-                  {t('curr_select_title', 'Currency')}
-                </div>
-                {(Object.keys(currencies) as Currency[]).map((currKey) => {
-                  const item = currencies[currKey];
-                  const isSelected = currency === currKey;
-                  return (
-                    <button
-                      key={currKey}
-                      type="button"
-                      role="menuitem"
-                      data-testid={`curr-opt-${currKey}`}
-                      onClick={() => {
-                        setCurrency(currKey);
-                        setCurrMenuOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[13px] transition-colors cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#384A22] text-[#F2F0E3] font-bold'
-                          : 'text-[#384A22] hover:bg-[#384A22]/10 font-medium'
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="font-mono font-bold text-sm">{item.symbol}</span>
-                        <span>{item.code}</span>
                       </span>
                       {isSelected && <span className="text-xs font-bold">✓</span>}
                     </button>
@@ -774,44 +688,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                       type="button"
                       data-testid={`mobile-lang-${langKey}`}
                       onClick={() => setLanguage(langKey)}
-                      className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        isSelected
+                      className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${isSelected
                           ? 'bg-[#384A22] text-[#F2F0E3] shadow-sm'
                           : 'bg-white text-[#384A22] border border-[#384A22]/20 hover:bg-[#384A22]/5'
-                      }`}
+                        }`}
                     >
                       <span className="text-sm leading-none">{item.flag}</span>
                       <span className={item.code === 'KM' ? 'font-khmer' : ''}>{item.nativeLabel}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Currency Switcher */}
-            <div className="pt-2.5 border-t border-[#384A22]/10">
-              <div className="text-[11px] font-bold text-[#8B6D3B] uppercase tracking-wider mb-2 flex items-center justify-between">
-                <span>{t('curr_select_title', 'Currency')}</span>
-                <span className="text-[11px] font-medium text-[#384A22]/70">{currencies[currency]?.label}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                {(Object.keys(currencies) as Currency[]).map((currKey) => {
-                  const item = currencies[currKey];
-                  const isSelected = currency === currKey;
-                  return (
-                    <button
-                      key={currKey}
-                      type="button"
-                      data-testid={`mobile-curr-${currKey}`}
-                      onClick={() => setCurrency(currKey)}
-                      className={`py-2 px-1.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
-                        isSelected
-                          ? 'bg-[#384A22] text-[#F2F0E3] shadow-sm'
-                          : 'bg-white text-[#384A22] border border-[#384A22]/20 hover:bg-[#384A22]/5'
-                      }`}
-                    >
-                      <span className="font-mono font-bold">{item.symbol}</span>
-                      <span>{item.code}</span>
                     </button>
                   );
                 })}
@@ -849,20 +732,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               {t('nav_autoship')}
             </button>
-            {onOpenAiSommelier && (
-              <button
-                type="button"
-                data-testid="mobile-nav-ai-sommelier-btn"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAiSommelier();
-                }}
-                className="flex items-center gap-2.5 w-full text-left py-2.5 text-base font-bold text-[#8B6D3B] border-b border-[#384A22]/10 cursor-pointer"
-              >
-                <Sparkles className="w-5 h-5 text-[#8B6D3B]" />
-                <span>{t('sommelier_title', 'AI Sommelier')}</span>
-              </button>
-            )}
             {isAdmin && (
               <button
                 type="button"
