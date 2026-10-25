@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, X, Send, Bot, User, Check, ShoppingBag } from 'lucide-react';
 import { Product, PRODUCTS } from '../data/botenzData';
 import { useI18n } from '../utils/i18nContext';
@@ -16,12 +16,7 @@ interface Message {
   suggestedProduct?: Product;
 }
 
-const QUICK_PROMPTS = [
-  '🍷 What pairs best with wine, whiskey, or craft beer?',
-  '🧀 Which flavor works best on a gourmet cheese board?',
-  '🌶️ Tell me about the Kampot bird’s eye chili in Chili Lime',
-  '🎁 What is the most popular gift bundle?',
-];
+
 
 export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
   isOpen,
@@ -33,12 +28,34 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
     {
       id: 'welcome',
       sender: 'ai',
-      text: "Greetings! I am your Kampot Harvest AI Sommelier. Ask me anything about our artisan cashews, Kampot terroir, flavor profiles, or gourmet culinary pairings.",
+      text: t('sommelier_welcome', "Greetings! I am your Kampot Harvest AI Sommelier. Ask me anything about our artisan cashews, Kampot terroir, flavor profiles, or gourmet culinary pairings."),
     },
   ]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [addedProductId, setAddedProductId] = useState<string | null>(null);
+
+  const quickPrompts = [
+    t('sommelier_prompt_1'),
+    t('sommelier_prompt_2'),
+    t('sommelier_prompt_3'),
+    t('sommelier_prompt_4'),
+  ];
+
+  useEffect(() => {
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 'welcome') {
+        return [
+          {
+            id: 'welcome',
+            sender: 'ai',
+            text: t('sommelier_welcome', "Greetings! I am your Kampot Harvest AI Sommelier. Ask me anything about our artisan cashews, Kampot terroir, flavor profiles, or gourmet culinary pairings."),
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [t]);
 
   if (!isOpen) return null;
 
@@ -86,7 +103,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
       const fallbackMsg: Message = {
         id: `ai-${Date.now()}`,
         sender: 'ai',
-        text: "For a rich, buttery treat, try our Honey Butter Cashews. For bold zest and lingering warmth, our Chili Lime Cashews with Kampot bird's eye chili are unbeatable!",
+        text: t('sommelier_fallback_reply'),
         suggestedProduct: PRODUCTS[0],
       };
       setMessages((prev) => [...prev, fallbackMsg]);
@@ -119,8 +136,8 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
               <Sparkles className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base font-bold leading-tight">Kampot AI Sommelier</h3>
-              <p className="text-[11px] text-[#F2F0E3]/70 font-medium">Artisan Flavor &amp; Pairing Assistant</p>
+              <h3 className="text-base font-bold leading-tight">{t('sommelier_title', 'Kampot AI Sommelier')}</h3>
+              <p className="text-[11px] text-[#F2F0E3]/70 font-medium">{t('sommelier_subtitle', 'Artisan Flavor & Pairing Assistant')}</p>
             </div>
           </div>
           <button
@@ -165,7 +182,9 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
                       />
                       <div className="min-w-0">
                         <div className="text-xs font-bold text-[#384A22] truncate">
-                          {m.suggestedProduct.name}
+                          {m.suggestedProduct.name.includes('Chili')
+                            ? t('product_chili_lime_name', m.suggestedProduct.name)
+                            : t('product_honey_butter_name', m.suggestedProduct.name)}
                         </div>
                         <div className="text-[11px] text-[#768E5C] font-semibold">
                           {formatPrice(m.suggestedProduct.price)}
@@ -206,7 +225,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
                 <Bot className="w-4 h-4 animate-spin" />
               </div>
               <div className="bg-white rounded-2xl px-4 py-2 text-xs text-[#384A22]/70 italic border border-[#384A22]/10">
-                Consulting Kampot culinary sommelier...
+                {t('sommelier_loading', 'Consulting Kampot culinary sommelier...')}
               </div>
             </div>
           )}
@@ -214,7 +233,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
 
         {/* Quick Suggestion Pills */}
         <div className="px-5 py-2.5 bg-[#EFECE0] border-t border-[#384A22]/10 overflow-x-auto flex gap-2 no-scrollbar">
-          {QUICK_PROMPTS.map((q, idx) => (
+          {quickPrompts.map((q, idx) => (
             <button
               key={idx}
               type="button"
@@ -237,7 +256,7 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
         >
           <input
             type="text"
-            placeholder="Ask about pairings, recipes, or flavor notes..."
+            placeholder={t('sommelier_placeholder', 'Ask about pairings, recipes, or flavor notes...')}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             disabled={loading}

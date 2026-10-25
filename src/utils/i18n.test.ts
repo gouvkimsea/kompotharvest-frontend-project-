@@ -130,4 +130,14 @@ test('Khmer font is universally set to Preahvihear across index.html and src/ind
   assert.ok(!indexCss.includes("Kantumruy"), 'src/index.css must not contain Kantumruy');
 });
 
+test('Chinese font and typography rules are cleanly defined across src/index.css', async () => {
+  const fs = await import('node:fs/promises');
+  const indexCss = await fs.readFile('src/index.css', 'utf-8');
+
+  assert.ok(indexCss.includes(".font-chinese"), 'src/index.css must contain .font-chinese class');
+  assert.ok(indexCss.includes("html[lang=\"zh\"]"), 'src/index.css must style html[lang="zh"]');
+  assert.ok(indexCss.includes("PingFang SC"), 'src/index.css must include PingFang SC for Chinese');
+  assert.ok(indexCss.includes("Microsoft YaHei"), 'src/index.css must include Microsoft YaHei for Chinese');
+});
+
 

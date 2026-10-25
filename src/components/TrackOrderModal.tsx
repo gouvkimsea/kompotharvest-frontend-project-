@@ -157,7 +157,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                 disabled={isLoading}
                 className="px-6 py-3 rounded-xl bg-[#8B6D3B] hover:bg-[#765B2F] disabled:opacity-60 text-[#F2F0E3] text-sm font-semibold transition-colors cursor-pointer whitespace-nowrap shrink-0"
               >
-                {isLoading ? 'Checking...' : t('track_btn_check', 'Check Status')}
+                {isLoading ? t('track_checking', 'Checking...') : t('track_btn_check', 'Check Status')}
               </button>
             </div>
 
@@ -204,9 +204,9 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                         #{trackedOrder.orderId}
                       </span>
                       <span aria-hidden="true">·</span>
-                      <span className="whitespace-nowrap">Placed {trackedOrder.createdAt}</span>
+                      <span className="whitespace-nowrap">{t('order_placed_prefix', 'Placed')} {trackedOrder.createdAt}</span>
                       <span aria-hidden="true">·</span>
-                      <span className="whitespace-nowrap">Tracking {trackedOrder.trackingCode}</span>
+                      <span className="whitespace-nowrap">{t('order_tracking_prefix', 'Tracking')} {trackedOrder.trackingCode}</span>
                     </div>
                     <h3 className="text-lg sm:text-xl font-bold text-[#384A22] mt-1.5 flex items-center gap-2">
                       {trackedOrder.status === 'delivered' ? (
@@ -214,7 +214,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                       ) : (
                         <Package className="w-5 h-5 text-[#8B6D3B] shrink-0" />
                       )}
-                      <span>{trackedOrder.statusLabel}</span>
+                      <span>{t(`order_status_${trackedOrder.status}`, trackedOrder.statusLabel)}</span>
                     </h3>
                   </div>
 
@@ -303,7 +303,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
                                   : 'text-[#384A22]/50'
                               }`}
                             >
-                              {step.title}
+                              {t(`timeline_${step.stage}`, step.title)}
                             </p>
                             <p className="text-xs text-[#384A22]/70">{step.location}</p>
                           </div>

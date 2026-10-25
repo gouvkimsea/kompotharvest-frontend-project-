@@ -217,7 +217,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   : 'hover:text-[#384A22]'
               }`}
             >
-              Inventory
+              {t('nav_inventory', 'Inventory')}
             </button>
           )}
         </nav>
@@ -317,7 +317,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>{currentUserName.split(' ')[0]}</span>
                 </>
               ) : (
-                <span>Sign In</span>
+                <span>{t('account_sign_in_tab', 'Sign In')}</span>
               )}
             </button>
           )}
@@ -760,7 +760,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => handleNavClick('admin_inventory')}
                 className="block w-full text-left py-2.5 text-base font-bold text-[#8B6D3B] border-b border-[#384A22]/10"
               >
-                Inventory Overview
+                {t('nav_inventory_overview', 'Inventory Overview')}
               </button>
             )}
             {onOpenAccountModal && (
@@ -787,7 +787,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <span>{currentUserName}</span>
                   </>
                 ) : (
-                  <span>Sign In</span>
+                  <span>{t('account_sign_in_tab', 'Sign In')}</span>
                 )}
               </button>
             )}

@@ -182,7 +182,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                         data-testid={`hero-out-of-stock-label-${item.id}`}
                         className="absolute bottom-2 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
                       >
-                        Out of Stock
+                        {t('badge_out_of_stock', 'Out of Stock')}
                       </span>
                     )}
                   </div>
@@ -198,19 +198,23 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
         <div className="relative z-20 w-full max-w-[850px] mx-auto px-4">
           {/* Top 5 Green Organic Blobs */}
           <div className="grid grid-cols-5 gap-1.5 sm:gap-4 px-1 sm:px-6 -mb-9 relative z-20">
-            {HERO_STATS.map((stat, idx) => (
-              <div
-                key={idx}
-                className="blob-badge bg-[#2D471E] text-[#F2F0E3] h-[72px] sm:h-[94px] flex flex-col items-center justify-center text-center shadow-md px-1 sm:px-2"
-              >
-                <span className="text-[12px] min-[380px]:text-[15px] sm:text-[25px] font-medium leading-tight tracking-tight">
-                  {stat.top}
-                </span>
-                <span className="text-[9px] min-[380px]:text-[11px] sm:text-[15px] font-light text-[#D5DEC8] leading-tight mt-0.5">
-                  {stat.bottom}
-                </span>
-              </div>
-            ))}
+            {HERO_STATS.map((stat, idx) => {
+              const statTopKey = `hero_stat_${idx + 1}_top`;
+              const statBottomKey = `hero_stat_${idx + 1}_bottom`;
+              return (
+                <div
+                  key={idx}
+                  className="blob-badge bg-[#2D471E] text-[#F2F0E3] h-[72px] sm:h-[94px] flex flex-col items-center justify-center text-center shadow-md px-1 sm:px-2"
+                >
+                  <span className="text-[12px] min-[380px]:text-[15px] sm:text-[25px] font-medium leading-tight tracking-tight">
+                    {t(statTopKey, stat.top)}
+                  </span>
+                  <span className="text-[9px] min-[380px]:text-[11px] sm:text-[15px] font-light text-[#D5DEC8] leading-tight mt-0.5">
+                    {t(statBottomKey, stat.bottom)}
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           {/* Cream Rounded Feature Card with Vertical Hairline Dividers */}
@@ -218,6 +222,15 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
             <div className="grid grid-cols-5 divide-x divide-[#8B6D3B]/35">
               {HERO_FEATURES.map((feat) => {
                 const isSelected = selectedFeatureId === feat.id;
+                const featKeyMap: Record<string, string> = {
+                  'real-nuts': 'real_nuts',
+                  'cold-pressed': 'slow_roasted',
+                  'no-sugar': 'no_sugar',
+                  'no-flavoring': 'no_flavoring',
+                  'double-protein': 'double_protein',
+                };
+                const suffix = featKeyMap[feat.id] || 'real_nuts';
+                const title = t(`hero_feat_${suffix}_title`, feat.title);
                 return (
                   <button
                     key={feat.id}
@@ -233,7 +246,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                       <FeatureIcon type={feat.iconType} />
                     </div>
                     <h3 className="text-[9px] min-[380px]:text-[11px] sm:text-[15px] font-extrabold text-[#384A22] leading-[1.2] whitespace-pre-line break-words">
-                      {feat.title}
+                      {title}
                     </h3>
                   </button>
                 );
@@ -245,10 +258,30 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
               <div className="mt-4 pt-4 border-t border-[#8B6D3B]/25 px-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-left animate-fadeIn">
                 <div>
                   <h2 className="text-[18px] font-extrabold text-[#384A22]">
-                    {activeFeature.headline}
+                    {(() => {
+                      const featKeyMap: Record<string, string> = {
+                        'real-nuts': 'real_nuts',
+                        'cold-pressed': 'slow_roasted',
+                        'no-sugar': 'no_sugar',
+                        'no-flavoring': 'no_flavoring',
+                        'double-protein': 'double_protein',
+                      };
+                      const suffix = featKeyMap[activeFeature.id] || 'real_nuts';
+                      return t(`hero_feat_${suffix}_headline`, activeFeature.headline);
+                    })()}
                   </h2>
                   <p className="text-[13.5px] text-[#384A22]/85 mt-0.5 max-w-xl">
-                    {activeFeature.detail}
+                    {(() => {
+                      const featKeyMap: Record<string, string> = {
+                        'real-nuts': 'real_nuts',
+                        'cold-pressed': 'slow_roasted',
+                        'no-sugar': 'no_sugar',
+                        'no-flavoring': 'no_flavoring',
+                        'double-protein': 'double_protein',
+                      };
+                      const suffix = featKeyMap[activeFeature.id] || 'real_nuts';
+                      return t(`hero_feat_${suffix}_detail`, activeFeature.detail);
+                    })()}
                   </p>
                 </div>
                 <button
@@ -256,7 +289,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                   onClick={() => setSelectedFeatureId(null)}
                   className="text-xs font-bold text-[#8B6D3B] hover:underline shrink-0 cursor-pointer"
                 >
-                  Close ✕
+                  {t('btn_close', 'Close')} ✕
                 </button>
               </div>
             )}
@@ -397,7 +430,13 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                   {/* Dark Green Pedestal Card */}
                   <div className="w-full max-w-[375px] bg-[#2D441C] rounded-b-[22px] rounded-t-[12px] pt-16 pb-6 px-6 text-center text-[#F2F0E3] shadow-xl border border-[#F2F0E3]/10">
                     <h3 className="text-[19px] font-semibold text-[#F3F1E4] tracking-tight">
-                      {bundle.name}
+                      {bundle.id.includes('complete')
+                        ? t('bundle_complete_4pack_name', bundle.name)
+                        : bundle.id.includes('jars')
+                        ? t('bundle_jars_duo_name', bundle.name)
+                        : bundle.id.includes('pouches')
+                        ? t('bundle_pouches_duo_name', bundle.name)
+                        : bundle.name}
                     </h3>
 
                     {isOutOfStock && (
@@ -405,7 +444,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                         data-testid={`bundle-out-of-stock-text-${bundle.id}`}
                         className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
                       >
-                        Product is Out of Stock
+                        {t('stock_product_out_of_stock', 'Product is Out of Stock')}
                       </p>
                     )}
 
@@ -438,7 +477,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
                             : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
                         }`}
                       >
-                        {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                        {isOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"

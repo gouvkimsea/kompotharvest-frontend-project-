@@ -95,7 +95,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                         data-testid={`footer-bottom-out-of-stock-${prod.id}`}
                         className="absolute bottom-2.5 left-1/2 -translate-x-1/2 z-10 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
                       >
-                        Out of Stock
+                        {t('badge_out_of_stock', 'Out of Stock')}
                       </span>
                     )}
                   </div>
@@ -104,7 +104,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   <div className="text-center flex-1 flex flex-col justify-between">
                     <div>
                       <h3 className="text-lg font-bold text-[#384A22] group-hover:text-[#8B6D3B] transition-colors leading-snug">
-                        {prod.name}
+                        {prod.name.includes('Chili') ? t('product_chili_lime_name', prod.name) : t('product_honey_butter_name', prod.name)}
                       </h3>
                       <p className="text-xs sm:text-sm text-[#384A22]/70 mt-1">
                         {localizedFlavor} · {localizedDesc}
@@ -114,7 +114,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                           data-testid={`footer-out-of-stock-statement-${prod.id}`}
                           className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mt-1.5"
                         >
-                          Product is Out of Stock
+                          {t('stock_product_out_of_stock', 'Product is Out of Stock')}
                         </p>
                       )}
                     </div>
@@ -150,7 +150,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                       }`}
                     >
                       {isOutOfStock ? (
-                        <span>Out of Stock</span>
+                        <span>{t('badge_out_of_stock', 'Out of Stock')}</span>
                       ) : (
                         <>
                           <span>{t('btn_add_to_cart')}</span>

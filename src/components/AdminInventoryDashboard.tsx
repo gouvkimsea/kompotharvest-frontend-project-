@@ -65,7 +65,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
   onLogout,
   onInventoryUpdated,
 }) => {
-  const { formatPrice } = useI18n();
+  const { t, formatPrice } = useI18n();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [stats, setStats] = useState<InventoryStats | null>(null);
   const [movements, setMovements] = useState<StockMovementRecord[]>([]);
@@ -680,7 +680,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               onClick={onBackToStore}
               className="w-full sm:w-auto px-5 py-2.5 rounded-full border border-[#384A22]/30 text-[#384A22] text-xs font-bold hover:bg-[#384A22]/5 cursor-pointer"
             >
-              Back to Store
+              {t('btn_back_to_store', 'Back to Store')}
             </button>
             {!currentUser && (
               <button
@@ -712,7 +712,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors cursor-pointer shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Storefront</span>
+              <span>{t('btn_back_to_store', 'Storefront')}</span>
             </button>
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#9AB87A] font-mono uppercase tracking-wider">
@@ -723,7 +723,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
                 <span className="truncate max-w-[220px] sm:max-w-none">{currentUser.email}</span>
               </div>
               <h1 className="text-lg sm:text-2xl font-bold text-[#F2F0E3] mt-0.5">
-                Business Inventory Overview
+                {t('nav_inventory_overview', 'Business Inventory Overview')}
               </h1>
             </div>
           </div>
@@ -760,7 +760,7 @@ export const AdminInventoryDashboard: React.FC<AdminInventoryDashboardProps> = (
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#B83A2A] hover:bg-[#9E2F21] text-white text-xs font-semibold transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span>Sign Out</span>
+              <span>{t('account_sign_out', 'Sign Out')}</span>
             </button>
           </div>
         </div>

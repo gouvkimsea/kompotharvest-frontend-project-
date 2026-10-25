@@ -247,7 +247,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-xs font-bold text-[#B83A2A] hover:underline cursor-pointer"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Sign Out</span>
+                <span>{t('account_sign_out', 'Sign Out')}</span>
               </button>
             )}
           </div>
@@ -314,7 +314,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                 <div className="text-right shrink-0">
                   <span className="text-xs font-bold inline-flex items-center gap-1 text-[#384A22]">
                     <ShieldCheck className="w-4 h-4" />
-                    <span>Active</span>
+                    <span>{t('account_status_active', 'Active')}</span>
                   </span>
                 </div>
               </div>
@@ -335,10 +335,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       <ShieldCheck className="w-5 h-5 text-[#9AB87A]" />
                       <div>
                         <span className="text-sm font-bold block">
-                          Admin Inventory Overview
+                          {t('nav_inventory_overview', 'Admin Inventory Overview')}
                         </span>
                         <span className="text-xs text-[#F2F0E3]/75">
-                          View and manage full business product inventory
+                          {t('account_admin_desc', 'View and manage full business product inventory')}
                         </span>
                       </div>
                     </div>
@@ -358,10 +358,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     <Sparkles className="w-5 h-5 text-[#8B6D3B]" />
                     <div>
                       <span className="text-sm font-bold text-[#384A22] block">
-                        15% VIP Discount ({currentUser.discountCode})
+                        {t('account_vip_discount', '15% VIP Discount')} ({currentUser.discountCode})
                       </span>
                       <span className="text-xs text-[#384A22]/70">
-                        Apply to your shopping bag
+                        {t('account_apply_bag', 'Apply to your shopping bag')}
                       </span>
                     </div>
                   </div>
@@ -380,10 +380,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     <ShieldCheck className="w-5 h-5 text-[#384A22]" />
                     <div>
                       <span className="text-sm font-bold text-[#384A22] block">
-                        Autoship &amp; Save
+                        {t('nav_autoship', 'Autoship & Save')}
                       </span>
                       <span className="text-xs text-[#384A22]/70">
-                        Manage recurring jar deliveries
+                        {t('account_autoship_desc', 'Manage recurring jar deliveries')}
                       </span>
                     </div>
                   </div>
@@ -402,10 +402,10 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     <Truck className="w-5 h-5 text-[#8B6D3B]" />
                     <div>
                       <span className="text-sm font-bold text-[#384A22] block">
-                        Track Order Status
+                        {t('footer_track_order', 'Track Order Status')}
                       </span>
                       <span className="text-xs text-[#384A22]/70">
-                        Check live delivery progress
+                        {t('account_track_desc', 'Check live delivery progress')}
                       </span>
                     </div>
                   </div>
@@ -415,7 +415,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
 
               <div className="pt-4 border-t border-[#384A22]/10 flex items-center justify-between">
                 <span className="text-xs text-[#384A22]/60">
-                  Delivery address &amp; phone are asked only at checkout.
+                  {t('account_checkout_note', 'Delivery address & phone are asked only at checkout.')}
                 </span>
                 <button
                   type="button"
@@ -423,7 +423,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#B83A2A]/35 text-[#B83A2A] hover:bg-[#B83A2A]/10 text-xs font-semibold cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>Sign Out</span>
+                  <span>{t('account_sign_out', 'Sign Out')}</span>
                 </button>
               </div>
             </div>
@@ -434,12 +434,12 @@ export const AccountModal: React.FC<AccountModalProps> = ({
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#384A22]/12 shadow-sm space-y-6">
               <div className="text-center space-y-1">
                 <h1 className="text-2xl font-bold text-[#384A22]">
-                  {authTab === 'login' ? 'Sign In' : 'Create Account'}
+                  {authTab === 'login' ? t('account_sign_in_tab', 'Sign In') : t('account_register_tab', 'Create Account')}
                 </h1>
                 <p className="text-xs text-[#384A22]/70">
                   {authTab === 'login'
-                    ? 'Sign in to access your 15% VIP discount and Autoship perks.'
-                    : 'Quick sign-up — delivery address and phone are only asked when you order.'}
+                    ? t('account_login_subtitle', 'Sign in to access your 15% VIP discount and Autoship perks.')
+                    : t('account_register_subtitle', 'Quick sign-up — delivery address and phone are only asked when you order.')}
                 </p>
               </div>
 
@@ -457,7 +457,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       : 'text-[#384A22] hover:text-[#384A22]/80'
                   }`}
                 >
-                  Sign In
+                  {t('account_sign_in_tab', 'Sign In')}
                 </button>
                 <button
                   type="button"
@@ -471,7 +471,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       : 'text-[#384A22] hover:text-[#384A22]/80'
                   }`}
                 >
-                  Create Account
+                  {t('account_register_tab', 'Create Account')}
                 </button>
               </div>
 
@@ -536,7 +536,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         htmlFor="acc-password"
                         className="block text-xs font-bold uppercase mb-1"
                       >
-                        Password *
+                        {t('form_password', 'Password')} *
                       </label>
                       <input
                         id="acc-password"
@@ -561,7 +561,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         htmlFor="acc-confirm-password"
                         className="block text-xs font-bold uppercase mb-1"
                       >
-                        Confirm Password *
+                        {t('form_confirm_password', 'Confirm Password')} *
                       </label>
                       <input
                         id="acc-confirm-password"
@@ -589,7 +589,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     disabled={isSubmitting}
                     className="w-full py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-sm transition-colors cursor-pointer"
                   >
-                    {isSubmitting ? 'Creating Account...' : 'Create Account'}
+                    {isSubmitting ? t('btn_creating_account', 'Creating Account...') : t('account_register_tab', 'Create Account')}
                   </button>
                 </form>
               ) : (
@@ -616,7 +616,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                       htmlFor="login-password"
                       className="block text-xs font-bold uppercase mb-1"
                     >
-                      Password *
+                      {t('form_password', 'Password')} *
                     </label>
                     <input
                       id="login-password"
@@ -629,7 +629,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[#384A22]/70">
-                    <span>Demo accounts:</span>
+                    <span>{t('account_demo_accounts', 'Demo accounts:')}</span>
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
@@ -641,7 +641,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         }}
                         className="font-semibold text-[#8B6D3B] underline cursor-pointer"
                       >
-                        Normal User Demo
+                        {t('account_demo_user', 'Normal User Demo')}
                       </button>
                       <button
                         type="button"
@@ -653,7 +653,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                         }}
                         className="font-semibold text-[#384A22] underline cursor-pointer"
                       >
-                        Admin Demo
+                        {t('account_demo_admin', 'Admin Demo')}
                       </button>
                     </div>
                   </div>
@@ -663,7 +663,7 @@ export const AccountModal: React.FC<AccountModalProps> = ({
                     disabled={isSubmitting}
                     className="w-full py-3.5 rounded-full bg-[#384A22] hover:bg-[#2B3B18] disabled:opacity-60 text-[#F2F0E3] font-semibold text-sm shadow-sm transition-colors cursor-pointer"
                   >
-                    {isSubmitting ? 'Signing In...' : 'Sign In'}
+                    {isSubmitting ? t('btn_signing_in', 'Signing In...') : t('account_sign_in_tab', 'Sign In')}
                   </button>
                 </form>
               )}

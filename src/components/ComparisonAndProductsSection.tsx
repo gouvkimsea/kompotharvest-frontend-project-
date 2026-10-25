@@ -80,7 +80,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
             <div className="md:col-span-4 flex flex-col items-center relative">
               <div className="mb-2 flex flex-col items-center md:-ml-12">
                 <span className="text-[18px] font-extrabold text-[#384A22] tracking-tight">
-                  Kampot Harvest
+                  {t('brand_name', 'Kampot Harvest')}
                 </span>
                 <span className="mt-1 w-8 h-8 rounded-full bg-[#384A22] text-[#F2F0E3] flex items-center justify-center shadow">
                   <svg className="w-4 h-4" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round">
@@ -253,7 +253,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                         data-testid={`product-bottom-out-of-stock-${product.id}`}
                         className="absolute bottom-6 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
                       >
-                        Out of Stock
+                        {t('badge_out_of_stock', 'Out of Stock')}
                       </span>
                     )}
                   </div>
@@ -264,7 +264,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                       onClick={() => onSelectProduct(product)}
                       className="text-[17px] font-bold text-[#384A22] hover:text-[#8B6D3B] transition-colors cursor-pointer truncate"
                     >
-                      {product.name}
+                      {product.name.includes('Chili') ? t('product_chili_lime_name', product.name) : t('product_honey_butter_name', product.name)}
                     </h4>
                     <p className="text-[13.5px] font-semibold text-[#768E5C] mt-0.5">
                       {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
@@ -275,7 +275,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                         data-testid={`product-out-of-stock-statement-${product.id}`}
                         className="text-xs font-bold uppercase tracking-wider text-[#B83A2A] mt-1"
                       >
-                        Product is Out of Stock
+                        {t('stock_product_out_of_stock', 'Product is Out of Stock')}
                       </p>
                     )}
 
@@ -310,7 +310,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                             : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
                         }`}
                       >
-                        {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                        {isOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart')}
                       </button>
                       <button
                         type="button"

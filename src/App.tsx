@@ -129,7 +129,7 @@ export default function App() {
   ) => {
     const resolvedSize = variantLabel || product.packageSize;
     if (isProductOutOfStock(inventory, product.id, resolvedSize)) {
-      showToast(`${product.name} is currently Out of Stock.`);
+      showToast(`${product.name} ${t('stock_product_out_of_stock')}`);
       return;
     }
     const itemId = `${product.id}-${resolvedSize}-${isAutoship ? 'sub' : 'once'}`;
@@ -162,7 +162,7 @@ export default function App() {
 
   const handleAddBundleToCart = (bundle: BundleItem) => {
     if (isProductOutOfStock(inventory, bundle.id)) {
-      showToast(`${bundle.name} is currently Out of Stock.`);
+      showToast(`${bundle.name} ${t('stock_product_out_of_stock')}`);
       return;
     }
     setCartItems((prev) => {
@@ -327,7 +327,7 @@ export default function App() {
               setCurrentUser(null);
               setAuthToken(null);
               setActivePage('home');
-              showToast('Signed out of administrator session.');
+              showToast(t('toast_signed_out_admin'));
             }}
           />
         )}
@@ -425,7 +425,7 @@ export default function App() {
         onUnlockDiscount={() => {
           setPromoCodeActive(true);
           setIsFirstOrderModalOpen(false);
-          showToast(`${t('btn_unlock_discount')}! Applied.`);
+          showToast(`${t('btn_unlock_discount')} — ${t('promo_applied')}`);
         }}
       />
 
@@ -460,9 +460,9 @@ export default function App() {
             setIsAccountModalOpen(false);
             setActivePage('admin_inventory');
             window.scrollTo({ top: 0, behavior: 'smooth' });
-            showToast(`Welcome Admin (${account.fullName}) — Redirected to Inventory Overview`);
+            showToast(`${t('toast_signed_in_as')} Admin (${account.fullName})`);
           } else {
-            showToast(`Signed in as ${account.fullName}`);
+            showToast(`${t('toast_signed_in_as')} ${account.fullName}`);
           }
         }}
         onLogout={() => {
@@ -478,11 +478,11 @@ export default function App() {
           if (activePage === 'admin_inventory') {
             setActivePage('home');
           }
-          showToast('Signed out of your Kampot Harvest account.');
+          showToast(t('toast_signed_out'));
         }}
         onApplyVipDiscount={() => {
           setPromoCodeActive(true);
-          showToast('15% VIP Member Discount (HARVEST15) applied to bag!');
+          showToast(t('toast_vip_applied'));
         }}
         onOpenTrackOrder={() => {
           setTrackedOrderNumber('KH-2026-1042');
@@ -520,7 +520,7 @@ export default function App() {
               },
             ];
           });
-          showToast('Added Wholesale Master Case (24× 250g Jars) to Bag!');
+          showToast(t('toast_wholesale_added'));
         }}
       />
     </div>

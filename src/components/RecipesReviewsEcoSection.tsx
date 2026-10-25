@@ -94,7 +94,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
 
               {/* Recipe Title Below Card */}
               <p className="mt-4 text-[21px] sm:text-[23px] font-semibold text-[#384A22] group-hover:text-[#8B6D3B] transition-colors text-center">
-                {recipe.title}
+                {t(`recipe_${recipe.id}_title`, recipe.title)}
               </p>
             </div>
           ))}
@@ -157,7 +157,7 @@ export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
                       </span>
                     </div>
                     <p className="text-[13.5px] font-light text-[#F2F0E3]/90 leading-relaxed whitespace-pre-line">
-                      {rev.text}
+                      {t(`review_${rev.id}_text`, rev.text)}
                     </p>
                   </div>
                 ))}

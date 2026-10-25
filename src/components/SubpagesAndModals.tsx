@@ -218,18 +218,26 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                           data-testid={`shop-bundle-bottom-out-of-stock-${bundle.id}`}
                           className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
                         >
-                          Out of Stock
+                          {t('badge_out_of_stock', 'Out of Stock')}
                         </span>
                       )}
                     </div>
                     <div className="mt-4 text-[#F2F0E3] w-full max-w-[330px]">
-                      <h3 className="text-[18px] font-medium text-[#F2F0E3]">{bundle.name}</h3>
+                      <h3 className="text-[18px] font-medium text-[#F2F0E3]">
+                        {bundle.id === 'bundle-complete-4pack'
+                          ? t('bundle_complete_4pack_name', bundle.name)
+                          : bundle.id === 'bundle-jars-duo'
+                          ? t('bundle_jars_duo_name', bundle.name)
+                          : bundle.id === 'bundle-pouches-duo'
+                          ? t('bundle_pouches_duo_name', bundle.name)
+                          : bundle.name}
+                      </h3>
                       {isOutOfStock && (
                         <p
                           data-testid={`shop-bundle-out-of-stock-statement-${bundle.id}`}
                           className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
                         >
-                          Product is Out of Stock
+                          {t('stock_product_out_of_stock', 'Product is Out of Stock')}
                         </p>
                       )}
                       <div className="mt-2 flex items-baseline justify-center gap-3 tabular-nums">
@@ -260,14 +268,14 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                               : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
                           }`}
                         >
-                          {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                          {isOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart')}
                         </button>
                         <button
                           type="button"
                           onClick={() => onSelectBundle(bundle)}
                           className="flex-1 py-2.5 px-5 rounded-full border border-[#8B6D3B] text-[#F2F0E3] hover:bg-[#8B6D3B]/20 text-[13.5px] font-medium transition-colors cursor-pointer"
                         >
-                          Learn more
+                          {t('btn_learn_more', 'Learn more')}
                         </button>
                       </div>
                     </div>
@@ -307,7 +315,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                           data-testid={`shop-product-bottom-out-of-stock-${product.id}`}
                           className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-[11px] font-bold uppercase tracking-wider whitespace-nowrap shadow-md"
                         >
-                          Out of Stock
+                          {t('badge_out_of_stock', 'Out of Stock')}
                         </span>
                       )}
                     </div>
@@ -318,7 +326,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                         onClick={() => onSelectProduct(product)}
                         className="text-[17px] font-semibold text-[#F2F0E3] hover:text-[#9AB87A] cursor-pointer"
                       >
-                        {product.name}
+                        {product.name.includes('Chili') ? t('product_chili_lime_name', product.name) : t('product_honey_butter_name', product.name)}
                       </h3>
                       <p className="text-[13.5px] font-medium text-[#9AB87A] mt-0.5">
                         {product.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {product.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch')}
@@ -329,7 +337,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                           data-testid={`shop-product-out-of-stock-statement-${product.id}`}
                           className="text-xs font-bold uppercase tracking-wider text-[#F2B8B5] mt-1"
                         >
-                          Product is Out of Stock
+                          {t('stock_product_out_of_stock', 'Product is Out of Stock')}
                         </p>
                       )}
 
@@ -364,7 +372,7 @@ export const ShopPageView: React.FC<ShopPageViewProps> = ({
                               : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
                           }`}
                         >
-                          {isOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                          {isOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart')}
                         </button>
                         <button
                           type="button"
@@ -529,7 +537,7 @@ export const RecipesPageView: React.FC<RecipesPageViewProps> = ({
                   onClick={() => onSelectRecipe(recipe)}
                   className="mt-3.5 text-[21px] font-medium text-[#384A22] group-hover:text-[#8B6D3B] transition-colors text-center cursor-pointer"
                 >
-                  {recipe.title}
+                  {t(`recipe_${recipe.id}_title`, recipe.title)}
                 </h3>
               </div>
             );
@@ -573,15 +581,13 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
               <div className="lg:col-span-7">
                 <span className="text-sm uppercase tracking-widest text-[#9AB87A] font-bold">
-                  {mode === 'rewards' ? 'Botenz Rewards & Bundles' : 'Botenz Autoship & Save'}
+                  {mode === 'rewards' ? t('nav_rewards_title', 'Botenz Rewards & Bundles') : t('nav_autoship_title', 'Botenz Autoship & Save')}
                 </span>
                 <h1 className="font-display text-[38px] sm:text-[52px] leading-[1.08] mt-2">
-                  Never Run Out of Clean Nut Protein — Save Extra 15%
+                  {t('autoship_headline', 'Never Run Out of Clean Nut Protein — Save Extra 15%')}
                 </h1>
                 <p className="mt-4 text-[16px] text-[#F2F0E3]/85 leading-relaxed max-w-xl">
-                  Subscribe to your favorite glass-jar nut butter powders on your schedule. Pause,
-                  swap flavors (Peanut, Pistachio, Almond, Cashew, Sesame, Cacao), or cancel
-                  anytime with one click.
+                  {t('autoship_subdesc', 'Subscribe to your favorite glass-jar nut butter powders on your schedule. Pause, swap flavors, or cancel anytime with one click.')}
                 </p>
 
                 <div className="mt-7 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -674,11 +680,10 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
         {/* The Botenz Way Story + Interactive Nutrition Calculator */}
         <div className="text-center max-w-3xl mx-auto mb-14">
           <h2 className="font-display text-[40px] sm:text-[54px] text-[#384A22] leading-tight">
-            The Botenz Way: <span className="text-[#768E5C]">Pure, Glass-Sealed &amp; Cold-Pressed</span>
+            {t('way_story_title', 'The Kampot Way: Pure, Glass-Sealed & Artisan Roasted')}
           </h2>
           <p className="mt-4 text-[16px] text-[#384A22]/85 leading-relaxed">
-            Why we make 6 distinct nut butter powders in reusable glass jars—and why no hexane,
-            no refined sugar, and cold-pressing makes all the difference for your body and the planet.
+            {t('way_story_desc', 'Why we craft our cashews in reusable glass jars—and why fair trade, zero refined sugar, and small-batch roasting make all the difference for your body and the planet.')}
           </p>
         </div>
 
@@ -696,7 +701,7 @@ export const BotenzWayAndAutoshipView: React.FC<BotenzWayAndAutoshipProps> = ({
               <div className="mt-6">
                 <div className="flex justify-between text-sm font-bold text-[#384A22] mb-2">
                   <label htmlFor="servings-slider">{t('calc_servings_label', 'Servings per week (30g portion):')}</label>
-                  <span className="tabular-nums text-[#8B6D3B]">{servingsPerWeek} servings / week</span>
+                  <span className="tabular-nums text-[#8B6D3B]">{servingsPerWeek} {t('calc_servings_unit', 'servings / week')}</span>
                 </div>
                 <input
                   id="servings-slider"
@@ -865,7 +870,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
       });
       const data = await res.json();
       if (!res.ok || data.success === false) {
-        setCheckoutApiError(data.error || 'Unable to place order due to insufficient stock.');
+        setCheckoutApiError(data.error || t('checkout_insufficient_stock', 'Unable to place order due to insufficient stock.'));
         setIsSubmittingOrder(false);
         return;
       }
@@ -928,7 +933,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <span>🎉 {t('cart_shipping_free')}</span>
             ) : (
               <span>
-                Add {formatPrice(Math.max(0, FREE_SHIPPING_THRESHOLD - summary.subtotal))} {t('cart_shipping_add_more')}
+                {t('cart_add_prefix', 'Add')} {formatPrice(Math.max(0, FREE_SHIPPING_THRESHOLD - summary.subtotal))} {t('cart_shipping_add_more')}
               </span>
             )}
             <div className="w-full h-1.5 bg-[#384A22]/15 rounded-full mt-1.5 overflow-hidden">
@@ -946,11 +951,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="text-center py-10 space-y-4">
               <CheckCircle2 className="w-16 h-16 text-[#384A22] mx-auto" />
               <h3 className="text-2xl font-extrabold text-[#384A22]">
-                Order #{orderId} Confirmed!
+                {t('order_num_prefix', 'Order #')}{orderId} {t('order_confirmed_suffix', 'Confirmed!')}
               </h3>
               <p className="text-sm text-[#384A22]/85 leading-relaxed">
-                Thank you, <strong>{form.fullName}</strong>! Your freshly roasted Kampot Harvest order
-                is confirmed in our system and being packed for delivery to{' '}
+                {t('cart_confirmed_desc_prefix', 'Thank you,')} <strong>{form.fullName}</strong>{t('cart_confirmed_desc_body', '! Your freshly roasted Kampot Harvest order is confirmed in our system and being packed for delivery to')}{' '}
                 <strong>{form.city} ({form.pincode})</strong>.
               </p>
               <div className="bg-white rounded-2xl p-4 text-left text-xs space-y-1 border border-[#384A22]/15">
@@ -1106,8 +1110,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <ShoppingBag className="w-12 h-12 text-[#384A22]/40 mx-auto" />
               <p className="text-lg font-bold text-[#384A22]">{t('cart_empty')}</p>
               <p className="text-sm text-[#384A22]/75">
-                Explore our cold-pressed Peanut, Pistachio, Almond, Cashew, Sesame &amp; Cacao
-                powders.
+                {t('cart_explore_flavors', 'Explore our artisan roasted Kampot cashews in Honey Butter and Chili Lime.')}
               </p>
             </div>
           ) : (
@@ -1127,13 +1130,31 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-[#384A22] truncate">{item.name}</h4>
+                    <h4 className="text-sm font-bold text-[#384A22] truncate">
+                      {item.id.includes('complete')
+                        ? t('bundle_complete_4pack_name', item.name)
+                        : item.id.includes('jars')
+                        ? t('bundle_jars_duo_name', item.name)
+                        : item.id.includes('pouches')
+                        ? t('bundle_pouches_duo_name', item.name)
+                        : item.id.includes('chili')
+                        ? t('product_chili_lime_name', item.name)
+                        : item.id.includes('honey')
+                        ? t('product_honey_butter_name', item.name)
+                        : item.name}
+                    </h4>
                     {item.variantLabel && (
-                      <p className="text-xs text-[#768E5C]">{item.variantLabel}</p>
+                      <p className="text-xs text-[#768E5C]">
+                        {item.variantLabel.includes('Jar')
+                          ? t('size_jar_250', item.variantLabel)
+                          : item.variantLabel.includes('Pouch')
+                          ? t('size_pouch_100', item.variantLabel)
+                          : item.variantLabel}
+                      </p>
                     )}
                     {item.isAutoship && (
                       <p className="text-[11px] font-bold text-[#8B6D3B]">
-                        Autoship &amp; Save (15% Off)
+                        {t('cart_autoship_badge', 'Autoship & Save (15% Off)')}
                       </p>
                     )}
                     <div className="mt-1 flex items-baseline gap-2 tabular-nums">
@@ -1198,7 +1219,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     onClick={() => onTogglePromoCode(true)}
                     className="px-4 py-2 rounded-full bg-[#384A22] text-[#F2F0E3] text-xs font-semibold cursor-pointer"
                   >
-                    {promoCodeActive ? 'Applied ✓' : t('btn_apply')}
+                    {promoCodeActive ? t('promo_applied', 'Applied ✓') : t('btn_apply')}
                   </button>
                 </div>
               </div>
@@ -1223,7 +1244,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <div className="flex justify-between text-[#384A22]/80">
                 <span>{t('cart_shipping')}</span>
                 <span className="tabular-nums">
-                  {summary.shippingFee === 0 ? 'FREE' : formatPrice(summary.shippingFee)}
+                  {summary.shippingFee === 0 ? t('cart_shipping_free_badge', 'FREE') : formatPrice(summary.shippingFee)}
                 </span>
               </div>
               <div className="flex justify-between text-lg font-extrabold text-[#384A22] pt-2 border-t border-[#384A22]/10">
@@ -1366,10 +1387,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       >
         <div className="flex items-center justify-between gap-2 mb-2">
           <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#384A22]">
-            Available Alternative — In Stock Now
+            {t('rec_available_alt', 'Available Alternative — In Stock Now')}
           </span>
           <span className="text-[11px] font-bold text-[#768E5C]">
-            {topAlt.stockQuantity} in stock
+            {topAlt.stockQuantity} {t('rec_in_stock', 'in stock')}
           </span>
         </div>
         <div className="flex items-center justify-between gap-3">
@@ -1396,7 +1417,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 onClick={() => handleViewRecommendedItem(topAlt)}
                 className="px-3 py-1.5 rounded-full border border-[#384A22]/25 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] text-[11px] font-bold transition-colors cursor-pointer"
               >
-                View Option
+                {t('rec_view_option', 'View Option')}
               </button>
             )}
             <button
@@ -1404,7 +1425,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               onClick={() => handleAddRecommendedItemToCart(topAlt)}
               className="px-3 py-1.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[11px] font-bold transition-colors cursor-pointer"
             >
-              Add to Cart
+              {t('btn_add_to_cart', 'Add to Cart')}
             </button>
           </div>
         </div>
@@ -1424,25 +1445,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div>
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#768E5C]">
               {recommendations.targetOutOfStock
-                ? 'Recommended In-Stock Replacements'
-                : 'Curated For Your Taste'}
+                ? t('rec_replacements', 'Recommended In-Stock Replacements')
+                : t('rec_curated', 'Curated For Your Taste')}
             </span>
             <h4 className="text-lg sm:text-xl font-extrabold text-[#384A22]">
               {recommendations.targetOutOfStock
-                ? 'Available Alternatives & Related Products'
+                ? t('rec_available_alternatives', 'Available Alternatives & Related Products')
                 : activeRecTab === 'related'
-                ? 'Related Products'
+                ? t('rec_related', 'Related Products')
                 : activeRecTab === 'you_may_like'
-                ? 'You May Also Like'
-                : 'Frequently Bought Together'}
+                ? t('rec_you_may_like', 'You May Also Like')
+                : t('rec_bought_together', 'Frequently Bought Together')}
             </h4>
           </div>
 
           <div className="inline-flex items-center bg-white/80 rounded-full p-1 border border-[#384A22]/15 self-start sm:self-auto">
             {[
-              { id: 'related', label: 'Related Products' },
-              { id: 'you_may_like', label: 'You May Also Like' },
-              { id: 'bought_together', label: 'Bought Together' },
+              { id: 'related', label: t('rec_related', 'Related Products') },
+              { id: 'you_may_like', label: t('rec_you_may_like', 'You May Also Like') },
+              { id: 'bought_together', label: t('rec_bought_together', 'Bought Together') },
             ].map((tab) => {
               const isTabActive = activeRecTab === tab.id;
               return (
@@ -1526,9 +1547,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   >
                     {rec.inStock
                       ? rec.stockQuantity < 10
-                        ? `Only ${rec.stockQuantity} left`
-                        : `In Stock (${rec.stockQuantity})`
-                      : 'Out of Stock'}
+                        ? t('stock_only_left', 'Only {count} left').replace('{count}', String(rec.stockQuantity))
+                        : `${t('stock_in_stock', 'In Stock')} (${rec.stockQuantity})`
+                      : t('badge_out_of_stock', 'Out of Stock')}
                   </span>
                 </div>
 
@@ -1538,7 +1559,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     onClick={() => handleViewRecommendedItem(rec)}
                     className="py-2 px-3 rounded-full border border-[#384A22]/25 text-[#384A22] hover:bg-[#384A22] hover:text-[#F2F0E3] text-xs font-bold transition-colors cursor-pointer"
                   >
-                    View Product
+                    {t('rec_view_product', 'View Product')}
                   </button>
                   <button
                     type="button"
@@ -1550,7 +1571,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         : 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed'
                     }`}
                   >
-                    {rec.inStock ? 'Add to Cart' : 'Out of Stock'}
+                    {rec.inStock ? t('btn_add_to_cart', 'Add to Cart') : t('badge_out_of_stock', 'Out of Stock')}
                   </button>
                 </div>
               </div>
@@ -1578,7 +1599,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-[#8B6D3B]">
                 {t('hero_bundle_offer_title', '25% OFF')} {t('cat_bundles', 'Bundles')}
               </span>
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22]">{bundle.name}</h3>
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22]">
+                {bundle.id === 'bundle-complete-4pack'
+                  ? t('bundle_complete_4pack_name', bundle.name)
+                  : bundle.id === 'bundle-jars-duo'
+                  ? t('bundle_jars_duo_name', bundle.name)
+                  : bundle.id === 'bundle-pouches-duo'
+                  ? t('bundle_pouches_duo_name', bundle.name)
+                  : bundle.name}
+              </h3>
             </div>
             <button
               type="button"
@@ -1600,7 +1629,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               />
               {isBundleOutOfStock && (
                 <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-xs font-bold uppercase tracking-wider shadow-md">
-                  Out of Stock
+                  {t('badge_out_of_stock', 'Out of Stock')}
                 </span>
               )}
             </div>
@@ -1609,19 +1638,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {isBundleOutOfStock && (
                 <div className="mb-3">
                   <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
-                    This product is currently Out of Stock.
+                    {t('stock_currently_out_of_stock', 'This product is currently Out of Stock.')}
                   </p>
                   {renderOutOfStockAlternativesCallout()}
                 </div>
               )}
-              <p className="text-sm text-[#384A22]/85 leading-relaxed mb-4">{bundle.description}</p>
+              <p className="text-sm text-[#384A22]/85 leading-relaxed mb-4">
+                {bundle.id.includes('complete')
+                  ? t('bundle_complete_4pack_desc', bundle.description)
+                  : bundle.id.includes('jars') || bundle.id.includes('nut-lovers')
+                  ? t('bundle_jars_duo_desc', bundle.description)
+                  : bundle.id.includes('pouches') || bundle.id.includes('best-seller')
+                  ? t('bundle_pouches_duo_desc', bundle.description)
+                  : bundle.description}
+              </p>
               <h4 className="text-xs font-extrabold uppercase tracking-wider text-[#384A22] mb-2">
-                Included in Your Box:
+                {t('bundle_included_box', 'Included in Your Box:')}
               </h4>
               <ul className="space-y-1 text-xs font-medium text-[#384A22]/90 mb-5">
-                {bundle.includedItems.map((item, i) => (
-                  <li key={i}>✓ {item}</li>
-                ))}
+                {bundle.includedItems.map((item, i) => {
+                  const isHoney = item.includes('Honey Butter');
+                  const isJar = item.includes('250g Jar');
+                  const localizedName = isHoney
+                    ? t('product_honey_butter_name', 'Honey Butter Cashews')
+                    : t('product_chili_lime_name', 'Chili Lime Cashews');
+                  const localizedSize = isJar
+                    ? t('size_jar_250', '250g Jar')
+                    : t('size_pouch_100', '100g Pouch');
+                  const priceStr = formatPrice(isJar ? 20 : 10);
+                  return (
+                    <li key={i}>
+                      ✓ {localizedName} ({localizedSize} · {priceStr})
+                    </li>
+                  );
+                })}
               </ul>
 
               <div className="flex items-baseline gap-3 mb-4 tabular-nums">
@@ -1648,7 +1698,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 }`}
               >
                 {isBundleOutOfStock
-                  ? 'Out of Stock'
+                  ? t('badge_out_of_stock', 'Out of Stock')
                   : `${t('btn_add_to_cart')} — ${t('hero_bundle_offer_title', '25% OFF')}`}
               </button>
             </div>
@@ -1684,7 +1734,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {t('flavors_title', 'Flavors')}: {product!.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')} · {activeVariant ? activeVariant.label : (product!.packageSize.includes('Jar') ? t('size_jar_250', '250g Jar') : t('size_pouch_100', '100g Pouch'))}
             </span>
             <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22] mt-0.5">
-              {product!.name} — {product!.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')}
+              {product!.name.includes('Chili') ? t('product_chili_lime_name', product!.name) : t('product_honey_butter_name', product!.name)} — {product!.flavor === 'Honey Butter' ? t('flavor_honey_butter', 'Honey Butter') : t('flavor_chili_lime', 'Chili Lime')}
             </h3>
           </div>
           <button
@@ -1707,7 +1757,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             />
             {isSelectedProductOutOfStock && (
               <span className="absolute bottom-3 left-1/2 -translate-x-1/2 px-3.5 py-1 rounded-md bg-[#B83A2A] text-[#F2F0E3] text-xs font-bold uppercase tracking-wider shadow-md">
-                Out of Stock
+                {t('badge_out_of_stock', 'Out of Stock')}
               </span>
             )}
           </div>
@@ -1716,18 +1766,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {isSelectedProductOutOfStock && (
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-[#B83A2A]">
-                  This product is currently Out of Stock.
+                  {t('stock_currently_out_of_stock', 'This product is currently Out of Stock.')}
                 </p>
                 {renderOutOfStockAlternativesCallout()}
               </div>
             )}
-            <p className="text-sm text-[#384A22]/85 leading-relaxed">{product!.description}</p>
+            <p className="text-sm text-[#384A22]/85 leading-relaxed">
+              {product!.name.includes('Chili')
+                ? t('product_chili_lime_desc', product!.description)
+                : t('product_honey_butter_desc', product!.description)}
+            </p>
 
             {/* Variant Selector */}
             {product!.variants && product!.variants.length > 0 && (
               <div>
                 <span className="block text-xs font-bold uppercase tracking-wider mb-2">
-                  {t('flavors_title', 'Package Size')}:
+                  {t('package_size_label', 'Package Size')}:
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {product!.variants.map((v, i) => {
@@ -1744,7 +1798,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         }`}
                       >
                         {v.label} — {formatPrice(v.price)}
-                        {variantOut ? ' (Out of Stock)' : ''}
+                        {variantOut ? ` (${t('badge_out_of_stock', 'Out of Stock')})` : ''}
                       </button>
                     );
                   })}
@@ -1777,13 +1831,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <span className="block text-lg font-extrabold text-[#384A22] tabular-nums">
                     {product!.nutrition.sugar}
                   </span>
-                  <span className="text-[11px] text-[#768E5C]">Sugar</span>
+                  <span className="text-[11px] text-[#768E5C]">{t('macro_sugar', 'Sugar')}</span>
                 </div>
               </div>
             )}
 
             <p className="text-xs text-[#384A22]/75">
-              <strong>Ingredients:</strong> {product!.ingredients}
+              <strong>{t('ingredients_label', 'Ingredients')}:</strong> {product!.ingredients}
             </p>
 
             {/* One-Time vs Autoship Toggle */}
@@ -1830,7 +1884,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] cursor-pointer'
                 }`}
               >
-                {isSelectedProductOutOfStock ? 'Out of Stock' : t('btn_add_to_cart')}
+                {isSelectedProductOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart')}
               </button>
             </div>
           </div>
@@ -1871,9 +1925,11 @@ export const RecipeDetailModal: React.FC<RecipeDetailModalProps> = ({
         <div className="flex justify-between items-start mb-4">
           <div>
             <span className="text-xs font-bold uppercase tracking-wider text-[#8B6D3B]">
-              Made with {recipe.productFilter}
+              {t('recipe_made_with', 'Made with')} {recipe.productFilter}
             </span>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22]">{recipe.title}</h3>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#384A22]">
+              {t(`recipe_${recipe.id}_title`, recipe.title)}
+            </h3>
           </div>
           <button
             type="button"
@@ -2068,7 +2124,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !message.trim()) {
-      setError('Please enter your name and your Kampot Harvest story or recipe.');
+      setError(t('fb_error_required', 'Please enter your name and your Kampot Harvest story or recipe.'));
       return;
     }
     setError('');
@@ -2147,7 +2203,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Priya Nair"
+                placeholder={t('fb_name_placeholder', 'e.g. Sokha Chan')}
                 className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm"
               />
             </div>
@@ -2160,7 +2216,7 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
                 type="text"
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
-                placeholder="e.g. Nutrition Coach, Home Baker, Runner"
+                placeholder={t('fb_role_placeholder', 'e.g. Nutrition Coach, Home Baker, Runner')}
                 className="w-full px-4 py-2.5 rounded-xl bg-white border border-[#384A22]/25 text-base sm:text-sm"
               />
             </div>

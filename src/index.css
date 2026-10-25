@@ -87,6 +87,34 @@ html[lang="km"] li {
   font-family: 'Preahvihear', sans-serif !important;
 }
 
+.font-chinese {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif !important;
+}
+
+/* All Chinese typography styled cleanly */
+:lang(zh),
+html[lang="zh"],
+html[lang="zh"] body,
+html[lang="zh"] .font-display,
+html[lang="zh"] .font-body,
+html[lang="zh"] h1,
+html[lang="zh"] h2,
+html[lang="zh"] h3,
+html[lang="zh"] h4,
+html[lang="zh"] h5,
+html[lang="zh"] h6,
+html[lang="zh"] p,
+html[lang="zh"] span:not([class*="font-mono"]),
+html[lang="zh"] a,
+html[lang="zh"] button,
+html[lang="zh"] input,
+html[lang="zh"] select,
+html[lang="zh"] textarea,
+html[lang="zh"] label,
+html[lang="zh"] li {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif !important;
+}
+
 /* Custom organic blob shapes matching Botenz */
 .blob-badge {
   border-radius: 52% 48% 46% 54% / 53% 47% 53% 47%;
