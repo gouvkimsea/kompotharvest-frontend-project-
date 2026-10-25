@@ -203,7 +203,7 @@ export const InfluencerAndHowToEnjoySection: React.FC<InfluencerAndHowToEnjoyPro
             </h3>
             <button
               type="button"
-              onClick={() => onNavigate('recipes')}
+              onClick={() => onNavigate('shop')}
               className="self-start sm:self-auto inline-flex items-center justify-center gap-1.5 px-7 py-2.5 rounded-full border border-[#F2F0E3]/70 text-[#F2F0E3] hover:bg-[#F2F0E3] hover:text-[#384A22] text-[14px] font-medium transition-colors cursor-pointer"
             >
               <span>{t('btn_see_recipes', 'See recipes')}</span>

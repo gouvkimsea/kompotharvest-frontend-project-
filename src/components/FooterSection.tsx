@@ -302,13 +302,6 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                 >
                   {t('footer_faq', 'FAQ')}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => onNavigate('recipes')}
-                  className="hover:text-[#9AB87A] transition-colors cursor-pointer"
-                >
-                  {t('nav_recipes', 'Recipes')}
-                </button>
               </div>
 
               {/* Row 3: Shop */}

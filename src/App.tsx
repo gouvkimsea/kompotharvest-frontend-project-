@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Navbar, ActivePage } from './components/Navbar';
 import { HeroAndBundleSection } from './components/HeroAndBundleSection';
 import { ComparisonAndProductsSection } from './components/ComparisonAndProductsSection';
-import { InfluencerAndHowToEnjoySection } from './components/InfluencerAndHowToEnjoySection';
 import { RecipesReviewsEcoSection } from './components/RecipesReviewsEcoSection';
 import { FooterSection } from './components/FooterSection';
 import {
@@ -11,14 +10,12 @@ import {
   FeedbackModal,
   FirstOrderOfferModal,
   ProductDetailModal,
-  RecipeDetailModal,
-  RecipesPageView,
   ShopPageView,
 } from './components/SubpagesAndModals';
 import { TrackOrderModal } from './components/TrackOrderModal';
 import { AccountModal } from './components/AccountModal';
 import { AdminInventoryDashboard } from './components/AdminInventoryDashboard';
-import { ASSETS, BundleItem, Product, RecipeItem } from './data/botenzData';
+import { ASSETS, BundleItem, Product } from './data/botenzData';
 import {
   CartItem,
   calculateCartSummary,
@@ -44,7 +41,6 @@ export default function App() {
   // Modals state
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<BundleItem | null>(null);
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeItem | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
   const [isFirstOrderModalOpen, setIsFirstOrderModalOpen] = useState<boolean>(false);
   const [isTrackOrderModalOpen, setIsTrackOrderModalOpen] = useState<boolean>(false);
@@ -56,11 +52,6 @@ export default function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState<boolean>(false);
   const [accountModalMode, setAccountModalMode] = useState<'register' | 'login'>('register');
   const [accountModalRole, setAccountModalRole] = useState<AccountRole>('customer');
-
-  // Favorite recipes state
-  const [favoriteRecipes, setFavoriteRecipes] = useState<string[]>([
-    'pistachio-kunafa-toast',
-  ]);
 
   // Customer browsing history for Smart Product Recommendations
   const [recentlyViewedIds, setRecentlyViewedIds] = useState<string[]>([]);
@@ -203,14 +194,6 @@ export default function App() {
     setCartItems((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleToggleFavorite = (recipeId: string) => {
-    setFavoriteRecipes((prev) =>
-      prev.includes(recipeId)
-        ? prev.filter((id) => id !== recipeId)
-        : [...prev, recipeId]
-    );
-  };
-
   const summary = calculateCartSummary(cartItems, promoCodeActive);
 
   return (
@@ -259,11 +242,7 @@ export default function App() {
               inventory={inventory}
             />
 
-            <InfluencerAndHowToEnjoySection onNavigate={handleNavigate} />
-
             <RecipesReviewsEcoSection
-              onNavigate={handleNavigate}
-              onSelectRecipe={(recipe) => setSelectedRecipe(recipe)}
               onOpenFeedbackModal={() => setIsFeedbackModalOpen(true)}
             />
           </>
@@ -277,15 +256,6 @@ export default function App() {
             onSelectProduct={handleSelectProduct}
             onSelectBundle={handleSelectBundle}
             inventory={inventory}
-          />
-        )}
-
-        {activePage === 'recipes' && (
-          <RecipesPageView
-            favoriteIds={favoriteRecipes}
-            onToggleFavorite={handleToggleFavorite}
-            onSelectRecipe={(recipe) => setSelectedRecipe(recipe)}
-            onOpenShareRecipeModal={() => setIsFeedbackModalOpen(true)}
           />
         )}
 
@@ -411,12 +381,6 @@ export default function App() {
         inventory={inventory}
       />
 
-      {/* Recipe Detail Modal */}
-      <RecipeDetailModal
-        recipe={selectedRecipe}
-        onClose={() => setSelectedRecipe(null)}
-        onShopIngredient={() => handleNavigate('shop', 'powders')}
-      />
 
       {/* 15% OFF First Order Offer Modal (matches ref-sec2.png) */}
       <FirstOrderOfferModal

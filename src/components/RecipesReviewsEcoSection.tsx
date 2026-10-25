@@ -3,117 +3,22 @@ import {
   ASSETS,
   CUSTOMER_REVIEWS,
   ECO_PILLARS,
-  RECIPES,
-  RecipeItem,
 } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
-import { KitchenIconsRow } from './ComparisonAndProductsSection';
-import { ActivePage } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
 
 interface RecipesReviewsEcoProps {
-  onNavigate: (page: ActivePage) => void;
-  onSelectRecipe: (recipe: RecipeItem) => void;
   onOpenFeedbackModal: () => void;
 }
 
 export const RecipesReviewsEcoSection: React.FC<RecipesReviewsEcoProps> = ({
-  onNavigate,
-  onSelectRecipe,
   onOpenFeedbackModal,
 }) => {
   const { t } = useI18n();
-  const homeRecipes = RECIPES.filter((r) => r.featuredOnHome);
 
   return (
     <section className="w-full bg-[#F2F0E3] overflow-hidden">
-      {/* PART 1: HEALTHY WITH BOTENZ - RECIPES (matches clean-sec-6.png) */}
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-14 pt-12 pb-16">
-        {/* Header with Left & Right Kitchen Icons */}
-        <div className="flex items-center justify-between gap-4 mb-10">
-          <div className="hidden lg:block">
-            <KitchenIconsRow className="w-[345px]" />
-          </div>
-
-          <div className="text-center mx-auto">
-            <h3 className="font-display text-[38px] sm:text-[48px] lg:text-[54px] leading-[1.08] tracking-tight">
-              <span className="block font-normal text-[#384A22]">{t('recipes_section_title_1', 'Healthy With')}</span>
-              <span className="block font-normal text-[#768E5C]">{t('recipes_section_title_2', 'Botenz - Recipes')}</span>
-            </h3>
-          </div>
-
-          <div className="hidden lg:block">
-            <KitchenIconsRow className="w-[345px]" />
-          </div>
-        </div>
-
-        {/* 4 Recipe Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {homeRecipes.map((recipe) => (
-            <div
-              key={recipe.id}
-              onClick={() => onSelectRecipe(recipe)}
-              className="flex flex-col items-center group cursor-pointer"
-            >
-              {/* Rounded Food Photo Card with 3 Bottom-Edge Cream Blobs */}
-              <div className="relative w-full h-[380px] sm:h-[405px] rounded-[24px] overflow-hidden shadow-md">
-                <SmartImage
-                  src={recipe.image}
-                  alt={recipe.title}
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                />
-
-                {/* 3 Bottom Cream Nutrition Blobs */}
-                <div className="absolute inset-x-4 bottom-2 flex items-end justify-between gap-2 z-10">
-                  <div className="blob-badge bg-[#F2F0E3] text-[#314B1C] w-[78px] h-[58px] flex flex-col items-center justify-center text-center shadow">
-                    <span className="text-[16px] font-medium leading-none tabular-nums">
-                      {recipe.protein}
-                    </span>
-                    <span className="text-[12px] font-normal leading-none mt-1">{t('macro_protein', 'protein')}</span>
-                  </div>
-
-                  <div className="blob-badge bg-[#F2F0E3] text-[#314B1C] w-[78px] h-[58px] flex flex-col items-center justify-center text-center shadow">
-                    <span className="text-[16px] font-medium leading-none tabular-nums">
-                      {recipe.time}
-                    </span>
-                    <span className="text-[12px] font-normal leading-none mt-1">
-                      {recipe.timeUnit || t('time_minutes', 'minutes')}
-                    </span>
-                  </div>
-
-                  <div className="blob-badge bg-[#F2F0E3] text-[#314B1C] w-[78px] h-[58px] flex flex-col items-center justify-center text-center shadow">
-                    <span className="text-[16px] font-medium leading-none tabular-nums">
-                      {recipe.kcal}
-                    </span>
-                    <span className="text-[12px] font-normal leading-none mt-1">
-                      {recipe.kcalUnit || t('macro_kcal', 'kcal')}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Recipe Title Below Card */}
-              <p className="mt-4 text-[21px] sm:text-[23px] font-semibold text-[#384A22] group-hover:text-[#8B6D3B] transition-colors text-center">
-                {t(`recipe_${recipe.id}_title`, recipe.title)}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* View more recipes > button */}
-        <div className="mt-10 text-center">
-          <button
-            type="button"
-            onClick={() => onNavigate('recipes')}
-            className="inline-flex items-center justify-center gap-1.5 px-9 py-3.5 rounded-full bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3] text-[15px] font-medium shadow-md transition-colors cursor-pointer"
-          >
-            <span>{t('btn_view_more_recipes', 'View more recipes')}</span>
-            <span>›</span>
-          </button>
-        </div>
-      </div>
-
-      {/* PART 2: CUSTOMER FEEDBACK SECTION ON DARK FOREST GREEN (matches clean-sec-7.png) */}
+      {/* PART 1: CUSTOMER FEEDBACK SECTION ON DARK FOREST GREEN (matches clean-sec-7.png) */}
       <div
         className="relative w-full bg-[#384A22] pt-20 pb-20 px-4 sm:px-8 lg:px-14 bg-no-repeat bg-cover bg-center"
         style={{

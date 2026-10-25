@@ -9,7 +9,6 @@ export type ActivePage =
   | 'shop'
   | 'way'
   | 'autoship'
-  | 'recipes'
   | 'rewards'
   | 'admin_inventory';
 
@@ -192,18 +191,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             {t('nav_autoship')}
           </button>
 
-          {/* Recipes */}
-          <button
-            type="button"
-            onClick={() => handleNavClick('recipes')}
-            className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
-              activePage === 'recipes'
-                ? 'border-b-[1.5px] border-[#384A22] font-semibold'
-                : 'hover:text-[#768E5C]'
-            }`}
-          >
-            {t('nav_recipes')}
-          </button>
 
           {/* Admin Inventory Link (Only visible to authenticated Admins) */}
           {isAdmin && (
@@ -745,13 +732,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
             >
               {t('nav_autoship')}
-            </button>
-            <button
-              type="button"
-              onClick={() => handleNavClick('recipes')}
-              className="block w-full text-left py-2.5 text-base font-bold text-[#384A22] border-b border-[#384A22]/10"
-            >
-              {t('nav_recipes')}
             </button>
             {isAdmin && (
               <button
