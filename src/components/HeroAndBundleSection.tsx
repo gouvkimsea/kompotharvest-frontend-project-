@@ -116,20 +116,20 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
 
         {/* Center Hero Showcase: User's 4 Kampot Harvest Co. Products on Artisan Countertop Pedestal */}
         <div className="relative z-10 w-full max-w-[1100px] mx-auto px-4 my-4 sm:my-6 flex flex-col items-center">
-          {/* "See More" Button on the left side of the products */}
-          <div className="self-start mb-2.5 sm:mb-3 lg:mb-0 lg:absolute lg:-left-2 xl:-left-8 lg:top-1/2 lg:-translate-y-1/2 z-30">
+          {/* "See More" Button on the right side of the products */}
+          <div className="self-end mb-2.5 sm:mb-3 lg:mb-0 lg:absolute lg:-right-2 xl:-right-8 lg:top-1/2 lg:-translate-y-1/2 z-30">
             <button
               type="button"
               onClick={() => onNavigate('shop', 'powders')}
-              data-testid="hero-see-more-left-btn"
+              data-testid="hero-see-more-right-btn"
               aria-label="See more products"
               className="group inline-flex items-center gap-2.5 px-4 sm:px-5 py-2.5 sm:py-3 rounded-full bg-[#384A22] hover:bg-[#2B3B18] text-[#F2F0E3] shadow-lg hover:shadow-2xl border border-[#F2F0E3]/25 transition-all duration-300 hover:scale-105 cursor-pointer backdrop-blur-xs"
             >
-              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#8B6D3B] text-[#F2F0E3] flex items-center justify-center shrink-0 shadow-xs group-hover:bg-[#765B2F] transition-colors">
-                <ArrowRight className="w-3.5 h-3.5" />
-              </span>
               <span className="text-xs sm:text-[14px] font-bold tracking-tight whitespace-nowrap">
                 {t('btn_see_more', 'See More')}
+              </span>
+              <span className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-[#8B6D3B] text-[#F2F0E3] flex items-center justify-center shrink-0 shadow-xs group-hover:bg-[#765B2F] transition-colors">
+                <ArrowRight className="w-3.5 h-3.5" />
               </span>
             </button>
           </div>
