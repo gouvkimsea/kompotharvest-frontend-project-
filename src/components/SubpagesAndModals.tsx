@@ -1288,8 +1288,10 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 };
 
 /* ============================================================================
- * 5. PRODUCT / BUNDLE DETAIL MODAL
+ * 5. PRODUCT / BUNDLE DETAIL MODAL & FULL PAGE VIEW
  * ========================================================================== */
+export { ProductDetailPageView, type ProductDetailPageViewProps } from './ProductDetailPageView';
+
 interface ProductDetailModalProps {
   product: Product | null;
   bundle: BundleItem | null;

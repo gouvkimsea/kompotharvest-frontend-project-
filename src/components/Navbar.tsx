@@ -10,7 +10,8 @@ export type ActivePage =
   | 'way'
   | 'autoship'
   | 'rewards'
-  | 'admin_inventory';
+  | 'admin_inventory'
+  | 'product_detail';
 
 interface NavbarProps {
   activePage: ActivePage;
@@ -150,7 +151,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => handleNavClick('shop', 'powders')}
               aria-expanded={openDropdown === 'shop'}
               className={`whitespace-nowrap shrink-0 pb-1 transition-colors cursor-pointer ${
-                activePage === 'shop' || openDropdown === 'shop'
+                activePage === 'shop' || activePage === 'product_detail' || openDropdown === 'shop'
                   ? 'border-b-[1.5px] border-[#384A22] font-semibold'
                   : 'hover:text-[#768E5C]'
               }`}

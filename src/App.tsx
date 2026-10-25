@@ -9,7 +9,7 @@ import {
   CartDrawer,
   FeedbackModal,
   FirstOrderOfferModal,
-  ProductDetailModal,
+  ProductDetailPageView,
   ShopPageView,
 } from './components/SubpagesAndModals';
 import { TrackOrderModal } from './components/TrackOrderModal';
@@ -32,13 +32,14 @@ import { useI18n } from './utils/i18nContext';
 export default function App() {
   const { t } = useI18n();
   const [activePage, setActivePage] = useState<ActivePage>('home');
+  const [previousPage, setPreviousPage] = useState<ActivePage>('shop');
   const [shopCategory, setShopCategory] = useState<string>('powders');
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [promoCodeActive, setPromoCodeActive] = useState<boolean>(false);
   const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
   const [inventory, setInventory] = useState<InventoryItem[]>(() => createInitialInventory());
 
-  // Modals state
+  // Selected item state for Full Page View & Modals
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedBundle, setSelectedBundle] = useState<BundleItem | null>(null);
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState<boolean>(false);
@@ -59,6 +60,11 @@ export default function App() {
   const handleSelectProduct = (product: Product) => {
     setSelectedBundle(null);
     setSelectedProduct(product);
+    if (activePage !== 'product_detail') {
+      setPreviousPage(activePage);
+    }
+    setActivePage('product_detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setRecentlyViewedIds((prev) =>
       [product.id, ...prev.filter((id) => id !== product.id)].slice(0, 8)
     );
@@ -67,6 +73,11 @@ export default function App() {
   const handleSelectBundle = (bundle: BundleItem) => {
     setSelectedProduct(null);
     setSelectedBundle(bundle);
+    if (activePage !== 'product_detail') {
+      setPreviousPage(activePage);
+    }
+    setActivePage('product_detail');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setRecentlyViewedIds((prev) =>
       [bundle.id, ...prev.filter((id) => id !== bundle.id)].slice(0, 8)
     );
@@ -116,7 +127,8 @@ export default function App() {
     product: Product,
     isAutoship: boolean = false,
     variantLabel?: string,
-    customPrice?: number
+    customPrice?: number,
+    quantity: number = 1
   ) => {
     const resolvedSize = variantLabel || product.packageSize;
     if (isProductOutOfStock(inventory, product.id, resolvedSize)) {
@@ -130,7 +142,7 @@ export default function App() {
       const existing = prev.find((i) => i.id === itemId);
       if (existing) {
         return prev.map((i) =>
-          i.id === itemId ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === itemId ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
       return [
@@ -141,7 +153,7 @@ export default function App() {
           variantLabel: resolvedSize,
           price: unitPrice,
           originalPrice: unitPrice,
-          quantity: 1,
+          quantity: quantity,
           image: product.image,
           isAutoship,
         },
@@ -151,7 +163,7 @@ export default function App() {
     showToast(`${t('btn_added')} — ${product.name}`);
   };
 
-  const handleAddBundleToCart = (bundle: BundleItem) => {
+  const handleAddBundleToCart = (bundle: BundleItem, quantity: number = 1) => {
     if (isProductOutOfStock(inventory, bundle.id)) {
       showToast(`${bundle.name} ${t('stock_product_out_of_stock')}`);
       return;
@@ -160,7 +172,7 @@ export default function App() {
       const existing = prev.find((i) => i.id === bundle.id);
       if (existing) {
         return prev.map((i) =>
-          i.id === bundle.id ? { ...i, quantity: i.quantity + 1 } : i
+          i.id === bundle.id ? { ...i, quantity: i.quantity + quantity } : i
         );
       }
       return [
@@ -171,7 +183,7 @@ export default function App() {
           variantLabel: '25% OFF Bundle + Free Spoon & Recipe Book',
           price: bundle.price,
           originalPrice: bundle.originalPrice,
-          quantity: 1,
+          quantity: quantity,
           image: bundle.image,
         },
       ];
@@ -255,6 +267,25 @@ export default function App() {
             onAddBundleToCart={handleAddBundleToCart}
             onSelectProduct={handleSelectProduct}
             onSelectBundle={handleSelectBundle}
+            inventory={inventory}
+          />
+        )}
+
+        {/* Full-Page Product & Bundle Detail View (Replaces floating modal) */}
+        {activePage === 'product_detail' && (selectedProduct || selectedBundle) && (
+          <ProductDetailPageView
+            product={selectedProduct}
+            bundle={selectedBundle}
+            onBack={() => {
+              setActivePage(previousPage || 'shop');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            onNavigate={handleNavigate}
+            onAddProductToCart={handleAddProductToCart}
+            onAddBundleToCart={handleAddBundleToCart}
+            onSelectProduct={handleSelectProduct}
+            onSelectBundle={handleSelectBundle}
+            recentlyViewedIds={recentlyViewedIds}
             inventory={inventory}
           />
         )}
@@ -365,21 +396,6 @@ export default function App() {
         }}
       />
 
-      {/* Product / Bundle Detail Modal */}
-      <ProductDetailModal
-        product={selectedProduct}
-        bundle={selectedBundle}
-        onClose={() => {
-          setSelectedProduct(null);
-          setSelectedBundle(null);
-        }}
-        onAddProductToCart={handleAddProductToCart}
-        onAddBundleToCart={handleAddBundleToCart}
-        onSelectProduct={handleSelectProduct}
-        onSelectBundle={handleSelectBundle}
-        recentlyViewedIds={recentlyViewedIds}
-        inventory={inventory}
-      />
 
 
       {/* 15% OFF First Order Offer Modal (matches ref-sec2.png) */}
