@@ -114,3 +114,20 @@ test('all required component keys exist and are translated across EN, KM, and ZH
   }
 });
 
+test('Khmer font is universally set to Preahvihear across index.html and src/index.css', async () => {
+  const fs = await import('node:fs/promises');
+  const indexHtml = await fs.readFile('index.html', 'utf-8');
+  const indexCss = await fs.readFile('src/index.css', 'utf-8');
+
+  // Verify Google Fonts link includes Preahvihear
+  assert.ok(indexHtml.includes('family=Preahvihear'), 'index.html must load Preahvihear Google font');
+  assert.ok(!indexHtml.includes('Kantumruy'), 'index.html must not use Kantumruy');
+
+  // Verify CSS imports and rules for Preahvihear
+  assert.ok(indexCss.includes("family=Preahvihear"), 'src/index.css must import Preahvihear font');
+  assert.ok(indexCss.includes("'Preahvihear'"), 'src/index.css must set Preahvihear font-family');
+  assert.ok(indexCss.includes("html[lang=\"km\"]"), 'src/index.css must target html[lang="km"] with Preahvihear');
+  assert.ok(!indexCss.includes("Kantumruy"), 'src/index.css must not contain Kantumruy');
+});
+
+

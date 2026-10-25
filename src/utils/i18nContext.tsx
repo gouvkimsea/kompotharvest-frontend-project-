@@ -168,6 +168,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     btn_claim_offer: 'Claim Offer',
     hero_bundle_offer_desc: 'Save 25% On Artisan Roasted Cashews: Honey Butter & Chili Lime in 250g Jar ($20) & 100g Pouch ($10)',
     btn_learn_more: 'Learn more',
+    btn_see_more: 'See More',
     flavor_pill_honey: 'Honey Butter Glazed',
     flavor_pill_chili: 'Chili Lime Seasoned',
 
@@ -412,6 +413,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     btn_claim_offer: 'ទទួលយកការផ្តល់ជូន',
     hero_bundle_offer_desc: 'សន្សំ ២៥% លើគ្រាប់ស្វាយចន្ទីលីងសិប្បកម្ម៖ រសជាតិទឹកឃ្មុំប៊័រ និង ម្ទេសក្រូចឆ្មា ក្នុងក្រឡកែវ ២៥០ក្រាម និងកញ្ចប់ ១០០ក្រាម',
     btn_learn_more: 'ស្វែងយល់បន្ថែម',
+    btn_see_more: 'មើលបន្ថែម',
     flavor_pill_honey: 'ស្រោបទឹកឃ្មុំប៊័រ',
     flavor_pill_chili: 'រសជាតិម្ទេសក្រូចឆ្មា',
 
@@ -656,6 +658,7 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     btn_claim_offer: '立即领取优惠',
     hero_bundle_offer_desc: '购买手作腰果享 25% 优惠：蜂蜜黄油与辣椒青柠 250克玻璃罐装 ($20) 与 100克便携袋装 ($10)',
     btn_learn_more: '了解更多',
+    btn_see_more: '查看更多',
     flavor_pill_honey: '香浓蜂蜜黄油风味',
     flavor_pill_chili: '酸辣辣椒青柠风味',
 
@@ -873,6 +876,18 @@ export const I18nProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       localStorage.setItem('kampot_curr', curr);
     } catch {}
   };
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      const langCode = language === 'KM' ? 'km' : language === 'ZH' ? 'zh' : 'en';
+      document.documentElement.lang = langCode;
+      if (language === 'KM') {
+        document.documentElement.classList.add('font-khmer');
+      } else {
+        document.documentElement.classList.remove('font-khmer');
+      }
+    }
+  }, [language]);
 
   // Translation helper
   const t = (key: string, fallback?: string): string => {

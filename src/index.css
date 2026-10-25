@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Preahvihear&display=swap');
 @import "tailwindcss";
 
 @layer base {
@@ -18,7 +19,7 @@
     background-repeat: repeat;
     background-size: 260px 260px;
     color: #384A22;
-    font-family: 'Manrope', 'Kantumruy Pro', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: 'Manrope', 'Preahvihear', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
   body {
@@ -51,11 +52,39 @@ div.bg-\[\#F2F0E3\]:not(.blob-badge) {
 }
 
 .font-display {
-  font-family: 'Gill Sans', 'Plus Jakarta Sans', 'Manrope', sans-serif;
+  font-family: 'Gill Sans', 'Plus Jakarta Sans', 'Manrope', 'Preahvihear', sans-serif;
 }
 
 .font-body {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Manrope', 'Preahvihear', sans-serif;
+}
+
+.font-khmer {
+  font-family: 'Preahvihear', sans-serif !important;
+}
+
+/* All Khmer typography strictly styled with Preahvihear */
+:lang(km),
+html[lang="km"],
+html[lang="km"] body,
+html[lang="km"] .font-display,
+html[lang="km"] .font-body,
+html[lang="km"] h1,
+html[lang="km"] h2,
+html[lang="km"] h3,
+html[lang="km"] h4,
+html[lang="km"] h5,
+html[lang="km"] h6,
+html[lang="km"] p,
+html[lang="km"] span:not([class*="font-mono"]),
+html[lang="km"] a,
+html[lang="km"] button,
+html[lang="km"] input,
+html[lang="km"] select,
+html[lang="km"] textarea,
+html[lang="km"] label,
+html[lang="km"] li {
+  font-family: 'Preahvihear', sans-serif !important;
 }
 
 /* Custom organic blob shapes matching Botenz */

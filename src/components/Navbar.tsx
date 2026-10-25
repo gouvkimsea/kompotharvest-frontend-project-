@@ -275,7 +275,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     >
                       <span className="flex items-center gap-2.5">
                         <span className="text-base leading-none">{item.flag}</span>
-                        <span>{item.nativeLabel}</span>
+                        <span className={item.code === 'KM' ? 'font-khmer' : ''}>{item.nativeLabel}</span>
                       </span>
                       {isSelected && <span className="text-xs font-bold">✓</span>}
                     </button>
@@ -708,7 +708,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       }`}
                     >
                       <span className="text-sm leading-none">{item.flag}</span>
-                      <span>{item.nativeLabel}</span>
+                      <span className={item.code === 'KM' ? 'font-khmer' : ''}>{item.nativeLabel}</span>
                     </button>
                   );
                 })}
