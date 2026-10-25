@@ -172,7 +172,7 @@ export const ProductDetailPageView: React.FC<ProductDetailPageViewProps> = ({
         : bundle.description;
 
     return (
-      <div className="w-full bg-[#F2F0E3] text-[#384A22] min-h-screen pb-24">
+      <div className="w-full bg-[#F2F0E3] text-[#384A22] min-h-screen pb-36 xl:pb-24">
         {/* Breadcrumb & Navigation Bar */}
         <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-14 pt-8 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#384A22]/15 pb-4">
@@ -465,6 +465,49 @@ export const ProductDetailPageView: React.FC<ProductDetailPageViewProps> = ({
 
         {/* Smart Recommendations Section */}
         {renderSmartRecommendations()}
+
+        {/* Sticky Mobile One-Thumb Action Bar for Bundles */}
+        <div
+          id="mobile-sticky-action-bar-bundle"
+          className="fixed bottom-[62px] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#384A22]/15 px-4 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] xl:hidden flex items-center justify-between gap-3"
+        >
+          <div className="flex flex-col min-w-0">
+            <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#8B6D3B] truncate">
+              {localizedBundleName}
+            </span>
+            <div className="flex items-baseline gap-1.5 tabular-nums">
+              <span className="text-lg font-extrabold text-[#384A22]">
+                {formatPrice(bundlePrice * quantity)}
+              </span>
+              {bundleOrigPrice > bundlePrice && (
+                <span className="text-xs text-[#8B6D3B] line-through">
+                  {formatPrice(bundleOrigPrice * quantity)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            id="mobile-sticky-add-bundle"
+            disabled={isBundleOutOfStock}
+            onClick={() => {
+              if (!isBundleOutOfStock) {
+                onAddBundleToCart(bundle, quantity);
+              }
+            }}
+            className={`min-h-[46px] px-6 py-2.5 rounded-full text-sm font-extrabold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shrink-0 ${
+              isBundleOutOfStock
+                ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed'
+                : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3]'
+            }`}
+          >
+            <ShoppingBag className="w-4 h-4" />
+            <span>
+              {isBundleOutOfStock ? t('badge_out_of_stock', 'Out of Stock') : t('btn_add_to_cart', 'Add to Cart')}
+            </span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -503,7 +546,7 @@ export const ProductDetailPageView: React.FC<ProductDetailPageViewProps> = ({
     : activePrice;
 
   return (
-    <div className="w-full bg-[#F2F0E3] text-[#384A22] min-h-screen pb-24">
+    <div className="w-full bg-[#F2F0E3] text-[#384A22] min-h-screen pb-36 xl:pb-24">
       {/* Breadcrumb & Navigation Bar */}
       <div className="max-w-[1360px] mx-auto px-4 sm:px-8 lg:px-14 pt-8 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#384A22]/15 pb-4">
@@ -1055,6 +1098,57 @@ export const ProductDetailPageView: React.FC<ProductDetailPageViewProps> = ({
 
       {/* Smart Recommendations Section */}
       {renderSmartRecommendations()}
+
+      {/* Sticky Mobile One-Thumb Action Bar for Single Products */}
+      <div
+        id="mobile-sticky-action-bar-product"
+        className="fixed bottom-[62px] left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#384A22]/15 px-4 py-2.5 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] xl:hidden flex items-center justify-between gap-3"
+      >
+        <div className="flex flex-col min-w-0">
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-[#768E5C] truncate">
+            {activeVariant?.label || product!.packageSize}
+          </span>
+          <div className="flex items-baseline gap-1.5 tabular-nums">
+            <span className="text-lg font-extrabold text-[#384A22]">
+              {formatPrice(computedUnitPrice * quantity)}
+            </span>
+            {activeOrigPrice > computedUnitPrice && (
+              <span className="text-xs text-[#8B6D3B] line-through">
+                {formatPrice(activeOrigPrice * quantity)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          id="mobile-sticky-add-product"
+          disabled={isSelectedProductOutOfStock}
+          onClick={() => {
+            if (!isSelectedProductOutOfStock) {
+              onAddProductToCart(
+                product!,
+                isAutoship,
+                activeVariant?.label || product!.packageSize,
+                computedUnitPrice,
+                quantity
+              );
+            }
+          }}
+          className={`min-h-[46px] px-6 py-2.5 rounded-full text-sm font-extrabold shadow-md flex items-center justify-center gap-2 cursor-pointer transition-transform active:scale-95 shrink-0 ${
+            isSelectedProductOutOfStock
+              ? 'bg-[#B83A2A] text-[#F2F0E3] cursor-not-allowed'
+              : 'bg-[#8B6D3B] hover:bg-[#765B2F] text-[#F2F0E3]'
+          }`}
+        >
+          <ShoppingBag className="w-4 h-4" />
+          <span>
+            {isSelectedProductOutOfStock
+              ? t('badge_out_of_stock', 'Out of Stock')
+              : t('btn_add_to_cart', 'Add to Cart')}
+          </span>
+        </button>
+      </div>
     </div>
   );
 

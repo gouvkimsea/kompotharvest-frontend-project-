@@ -117,7 +117,7 @@ export const HeroAndBundleSection: React.FC<HeroAndBundleProps> = ({
         {/* Center Hero Showcase: User's 4 Kampot Harvest Co. Products on Artisan Countertop Pedestal */}
         <div className="relative z-10 w-full max-w-[1100px] mx-auto px-4 my-4 sm:my-6 flex flex-col items-center">
           {/* "See More" Button on the right side of the products */}
-          <div className="self-end mb-2.5 sm:mb-3 lg:mb-0 lg:absolute lg:-right-2 xl:-right-8 lg:top-1/2 lg:-translate-y-1/2 z-30">
+          <div className="self-end mb-2.5 sm:mb-3 xl:mb-0 xl:absolute xl:right-0 2xl:-right-6 xl:top-1/2 xl:-translate-y-1/2 z-30">
             <button
               type="button"
               onClick={() => onNavigate('shop', 'powders')}

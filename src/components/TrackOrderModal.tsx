@@ -89,7 +89,7 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto"
       onClick={onClose}
     >
       <div
@@ -97,8 +97,11 @@ export const TrackOrderModal: React.FC<TrackOrderModalProps> = ({
         aria-modal="true"
         aria-label={t('track_modal_title', 'Track Your Order')}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-2xl bg-[#F2F0E3] text-[#384A22] rounded-[28px] shadow-2xl border border-[#384A22]/15 overflow-hidden my-8"
+        className="w-full max-w-2xl bg-[#F2F0E3] text-[#384A22] rounded-t-[32px] sm:rounded-[28px] shadow-2xl border border-[#384A22]/15 overflow-hidden my-0 sm:my-8 max-h-[92vh] flex flex-col pb-safe sm:pb-0"
       >
+        {/* Mobile Pull-Down Handle */}
+        <div className="sm:hidden w-12 h-1.5 bg-[#384A22]/25 rounded-full mx-auto my-2.5 shrink-0" />
+
         {/* Modal Header */}
         <div className="bg-[#384A22] text-[#F2F0E3] px-4 min-[380px]:px-6 sm:px-8 py-4 sm:py-6 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">

@@ -125,6 +125,11 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     nav_shop_special: 'Shop Special Edition',
     nav_shop_all: 'Shop All Products',
     nav_bundles_discount: 'Botenz Bundles (25% OFF)',
+    bottom_nav_home: 'Home',
+    bottom_nav_shop: 'Shop',
+    bottom_nav_sommelier: 'Sommelier',
+    bottom_nav_track: 'Track',
+    bottom_nav_cart: 'Cart',
     
     // Selectors & Controls
     lang_select_title: 'Language',
@@ -545,6 +550,11 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     nav_shop_special: 'ទិញឈុតពិសេស',
     nav_shop_all: 'ទំនិញទាំងអស់',
     nav_bundles_discount: 'ឈុតពិសេស (បញ្ចុះ ២៥%)',
+    bottom_nav_home: 'ទំព័រដើម',
+    bottom_nav_shop: 'ហាង',
+    bottom_nav_sommelier: 'សោមេលីយេ',
+    bottom_nav_track: 'តាមដាន',
+    bottom_nav_cart: 'កន្ត្រក',
     
     // Selectors & Controls
     lang_select_title: 'ភាសា',
@@ -965,6 +975,11 @@ export const TRANSLATIONS: Record<Language, Record<string, string>> = {
     nav_shop_special: '选购特别限定版',
     nav_shop_all: '选购所有商品',
     nav_bundles_discount: '尊享套装 (立减 25%)',
+    bottom_nav_home: '首页',
+    bottom_nav_shop: '商店',
+    bottom_nav_sommelier: '品鉴顾问',
+    bottom_nav_track: '订单追踪',
+    bottom_nav_cart: '购物车',
     
     // Selectors & Controls
     lang_select_title: '语言切换',

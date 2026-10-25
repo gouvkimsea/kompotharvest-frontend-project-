@@ -1,7 +1,7 @@
 import { ASSETS, PRODUCTS, Product } from '../data/botenzData';
 import { SmartImage } from './SmartImage';
 import { ActivePage, BotenzLogo } from './Navbar';
-import { useI18n } from '../utils/i18nContext';
+import { useI18n, LANGUAGES, Language, CURRENCIES, Currency } from '../utils/i18nContext';
 import { AccountRole, InventoryItem, isProductOutOfStock } from '../utils/storeLogic';
 
 interface FooterSectionProps {
@@ -23,7 +23,7 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
   onAddProductToCart,
   inventory = [],
 }) => {
-  const { t, formatPrice } = useI18n();
+  const { t, formatPrice, language, setLanguage, currency, setCurrency } = useI18n();
   return (
     <footer className="w-full bg-[#F2F0E3] overflow-hidden">
       {/* PART 1: ARTISAN CASHEW COLLECTION SHOWCASE (Clean, spacious, uncrowded) */}
@@ -396,6 +396,61 @@ export const FooterSection: React.FC<FooterSectionProps> = ({
                   <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
                 </svg>
               </button>
+            </div>
+          </div>
+
+          {/* Bottom Preferences Bar (Language & Currency) */}
+          <div className="pt-8 mt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4">
+              {/* Language Selector */}
+              <div className="flex items-center gap-2 text-white/75">
+                <span className="font-semibold">{t('lang_select_title', 'Language')}:</span>
+                <div className="inline-flex rounded-lg bg-black/20 p-0.5 border border-white/10">
+                  {(Object.keys(LANGUAGES) as Language[]).map((lKey) => {
+                    const isSel = language === lKey;
+                    return (
+                      <button
+                        key={lKey}
+                        type="button"
+                        data-testid={`footer-lang-${lKey}`}
+                        onClick={() => setLanguage(lKey)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          isSel ? 'bg-[#9AB87A] text-[#1E2E11] shadow-xs' : 'text-white/80 hover:text-white'
+                        }`}
+                      >
+                        {lKey}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Currency Selector */}
+              <div className="flex items-center gap-2 text-white/75">
+                <span className="font-semibold">{t('curr_select_title', 'Currency')}:</span>
+                <div className="inline-flex rounded-lg bg-black/20 p-0.5 border border-white/10">
+                  {(Object.keys(CURRENCIES) as Currency[]).map((cKey) => {
+                    const isSel = currency === cKey;
+                    return (
+                      <button
+                        key={cKey}
+                        type="button"
+                        data-testid={`footer-curr-${cKey}`}
+                        onClick={() => setCurrency(cKey)}
+                        className={`px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                          isSel ? 'bg-[#9AB87A] text-[#1E2E11] shadow-xs' : 'text-white/80 hover:text-white'
+                        }`}
+                      >
+                        {CURRENCIES[cKey].symbol} {cKey}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-white/50 text-[11px] text-center sm:text-right">
+              © {new Date().getFullYear()} Kampot Harvest Co. · The Pride of Kampot, Roasted to Perfection.
             </div>
           </div>
         </div>

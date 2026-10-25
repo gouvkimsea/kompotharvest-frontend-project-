@@ -1229,7 +1229,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Footer Summary & Action */}
         {items.length > 0 && step !== 'confirmed' && (
-          <div className="p-6 bg-white border-t border-[#384A22]/15 space-y-3">
+          <div className="p-6 bg-white border-t border-[#384A22]/15 space-y-3 pb-safe">
             <div className="space-y-1 text-sm">
               <div className="flex justify-between text-[#384A22]/80">
                 <span>{t('cart_subtotal')} ({currency})</span>
@@ -2026,21 +2026,24 @@ export const FirstOrderOfferModal: React.FC<FirstOrderOfferModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/65 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/65 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-[920px] min-h-[500px] max-h-[92vh] overflow-y-auto bg-[#ECEAE0] rounded-2xl md:rounded-xs overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl"
+        className="relative w-full max-w-[920px] min-h-[460px] max-h-[92vh] overflow-y-auto bg-[#ECEAE0] rounded-t-[32px] sm:rounded-2xl md:rounded-xs overflow-hidden grid grid-cols-1 md:grid-cols-2 shadow-2xl pb-safe sm:pb-0"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Enjoy 15% OFF Your First Order"
       >
+        {/* Mobile Pull-Down Handle */}
+        <div className="sm:hidden w-12 h-1.5 bg-[#384A22]/25 rounded-full mx-auto my-2.5 shrink-0 col-span-full" />
+
         {/* Top-Right Green Close Circle */}
         <button
           type="button"
           onClick={onClose}
           aria-label="Close offer popup"
-          className="absolute top-5 right-5 z-20 w-9 h-9 rounded-full bg-[#385224] hover:bg-[#2B3B18] text-white flex items-center justify-center text-sm font-bold shadow cursor-pointer"
+          className="absolute top-4 sm:top-5 right-4 sm:right-5 z-20 w-9 h-9 rounded-full bg-[#385224] hover:bg-[#2B3B18] text-white flex items-center justify-center text-sm font-bold shadow cursor-pointer"
         >
           ✕
         </button>
@@ -2152,15 +2155,18 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({ isOpen, onClose })
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-[#F2F0E3] text-[#384A22] rounded-[28px] max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto"
+        className="bg-[#F2F0E3] text-[#384A22] rounded-t-[32px] sm:rounded-[28px] max-w-md w-full p-6 sm:p-8 shadow-2xl max-h-[92vh] overflow-y-auto pb-safe sm:pb-0"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Share your Botenz story"
       >
+        {/* Mobile Drag Indicator Handle */}
+        <div className="sm:hidden w-12 h-1.5 bg-[#384A22]/25 rounded-full mx-auto -mt-2 mb-4 shrink-0" />
+
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-2xl font-extrabold text-[#384A22]">{t('fb_modal_title', 'Tell Your Botenz Story')}</h3>
           <button

@@ -315,7 +315,7 @@ export const ComparisonAndProductsSection: React.FC<ComparisonAndProductsProps> 
                       <button
                         type="button"
                         onClick={() => onSelectProduct(product)}
-                        className="flex-1 py-2.5 px-3.5 rounded-full border border-[#8B6D3B] text-[#384A22] hover:bg-[#8B6D3B]/10 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap"
+                        className="flex-1 min-h-[44px] py-2.5 px-3.5 rounded-full border border-[#8B6D3B] text-[#384A22] hover:bg-[#8B6D3B]/10 text-[13.5px] font-medium transition-colors cursor-pointer whitespace-nowrap flex items-center justify-center"
                       >
                         {t('btn_learn_more')}
                       </button>

@@ -120,15 +120,18 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4"
       onClick={onClose}
     >
       <div
-        className="bg-[#F2F0E3] text-[#384A22] rounded-[24px] max-w-xl w-full flex flex-col h-[600px] max-h-[90vh] shadow-2xl overflow-hidden border border-[#384A22]/20"
+        className="bg-[#F2F0E3] text-[#384A22] rounded-t-[32px] sm:rounded-[24px] max-w-xl w-full flex flex-col h-[85vh] sm:h-[600px] max-h-[92vh] shadow-2xl overflow-hidden border border-[#384A22]/20 pb-safe sm:pb-0"
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-label="Kampot Harvest AI Sommelier"
       >
+        {/* Mobile Drag Indicator Handle */}
+        <div className="sm:hidden w-12 h-1.5 bg-[#384A22]/25 rounded-full mx-auto my-2.5 shrink-0" />
+
         {/* Header */}
         <div className="px-6 py-4 bg-[#384A22] text-[#F2F0E3] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -265,7 +268,8 @@ export const AiSommelierModal: React.FC<AiSommelierModalProps> = ({
           <button
             type="submit"
             disabled={loading || !input.trim()}
-            className="w-10 h-10 rounded-full bg-[#384A22] hover:bg-[#314B1C] disabled:opacity-50 text-white flex items-center justify-center cursor-pointer transition-colors shrink-0"
+            aria-label="Send message to Sommelier"
+            className="min-w-[44px] min-h-[44px] w-11 h-11 rounded-full bg-[#384A22] hover:bg-[#314B1C] disabled:opacity-50 text-white flex items-center justify-center cursor-pointer transition-transform active:scale-95 shrink-0"
           >
             <Send className="w-4 h-4" />
           </button>
