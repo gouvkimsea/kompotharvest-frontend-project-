@@ -23,7 +23,6 @@ interface NavbarProps {
   currentUserName?: string | null;
   isAdmin?: boolean;
   onOpenAccountModal?: () => void;
-  onOpenAiSommelier?: () => void;
 }
 
 export const BotenzLogo: React.FC<{ variant?: 'green' | 'white'; className?: string }> = ({
@@ -70,7 +69,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUserName,
   isAdmin = false,
   onOpenAccountModal,
-  onOpenAiSommelier,
 }) => {
   const { language, setLanguage, t, formatPrice } = useI18n();
   const [openDropdown, setOpenDropdown] = useState<'shop' | 'way' | null>(null);

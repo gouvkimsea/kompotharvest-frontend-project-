@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Store, Sparkles, Truck, ShoppingBag } from 'lucide-react';
+import { Home, Store, Truck, ShoppingBag } from 'lucide-react';
 import { ActivePage } from './Navbar';
 import { useI18n } from '../utils/i18nContext';
 
@@ -8,7 +8,7 @@ export interface MobileBottomNavProps {
   onNavigate: (page: ActivePage, categoryFilter?: string) => void;
   cartCount: number;
   onOpenCart: () => void;
-  onOpenAiSommelier: () => void;
+  onOpenAiSommelier?: () => void;
   onOpenTrackOrder: () => void;
 }
 
@@ -17,7 +17,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   onNavigate,
   cartCount,
   onOpenCart,
-  onOpenAiSommelier,
   onOpenTrackOrder,
 }) => {
   const { t } = useI18n();
@@ -85,22 +84,6 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           {isShopActive && (
             <span className="w-1.5 h-1.5 rounded-full bg-[#8B6D3B] mt-0.5" />
           )}
-        </button>
-
-        {/* 3. AI Sommelier (Artisan Highlight Button) */}
-        <button
-          type="button"
-          id="mobile-bottom-nav-sommelier"
-          onClick={onOpenAiSommelier}
-          aria-label={t('bottom_nav_sommelier', 'AI Sommelier')}
-          className="flex-1 min-w-[48px] min-h-[48px] flex flex-col items-center justify-center gap-0.5 rounded-xl text-[#384A22]/85 hover:text-[#384A22] active:scale-95 transition-all duration-200 cursor-pointer group"
-        >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#8B6D3B] to-[#768E5C] text-[#FAF8F2] flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-            <Sparkles className="w-4 h-4 fill-current text-[#FAF8F2]" />
-          </div>
-          <span className="text-[10px] font-bold text-[#8B6D3B] tracking-tight leading-tight">
-            {t('bottom_nav_sommelier', 'Sommelier')}
-          </span>
         </button>
 
         {/* 4. Track Order Button */}

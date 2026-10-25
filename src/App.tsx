@@ -236,7 +236,6 @@ export default function App() {
           setAccountModalRole('customer');
           setIsAccountModalOpen(true);
         }}
-        onOpenAiSommelier={() => setIsAiSommelierOpen(true)}
       />
 
       {/* Main Content Area */}
@@ -524,7 +523,6 @@ export default function App() {
         onNavigate={handleNavigate}
         cartCount={summary.itemCount}
         onOpenCart={() => setIsCartOpen(true)}
-        onOpenAiSommelier={() => setIsAiSommelierOpen(true)}
         onOpenTrackOrder={() => {
           setTrackedOrderNumber('');
           setIsTrackOrderModalOpen(true);

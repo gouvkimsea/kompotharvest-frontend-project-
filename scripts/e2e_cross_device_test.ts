@@ -313,25 +313,11 @@ async function testBrowser(browserPath: string, browserName: string) {
     console.log(`  ✓ Navigated to Shop page via one-thumb tap: ${inShop}`);
     if (!inShop) throw new Error('Shop navigation via bottom nav failed');
 
-    // 3C. Test 1-Thumb AI Sommelier Bottom Sheet
-    console.log(`\n[Test 3C] 1-Thumb AI Sommelier Bottom Sheet:`);
-    await page.click('#mobile-bottom-nav-sommelier');
-    await sleep(500);
-    const sommelierBottomSheet = await page.evaluate(() => {
-      const dialog = document.querySelector('[role="dialog"][aria-label="Kampot Harvest AI Sommelier"]');
-      if (!dialog) return false;
-      const style = window.getComputedStyle(dialog);
-      return style.display !== 'none';
-    });
-    console.log(`  ✓ AI Sommelier opened as bottom sheet: ${sommelierBottomSheet}`);
-    if (!sommelierBottomSheet) throw new Error('AI Sommelier did not open via bottom nav');
-
-    // Close Sommelier
-    await page.evaluate(() => {
-      const closeBtn = document.querySelector('button[aria-label*="sommelier" i]') as HTMLElement;
-      if (closeBtn) closeBtn.click();
-    });
-    await sleep(300);
+    // 3C. Verify Clean Mobile Bottom Navigation (AI Sommelier button removed)
+    console.log(`\n[Test 3C] Verified Clean Mobile Bottom Navigation:`);
+    const sommelierBottomNavBtn = await page.$('#mobile-bottom-nav-sommelier');
+    console.log(`  ✓ Mobile bottom nav Sommelier button removed: ${sommelierBottomNavBtn === null}`);
+    if (sommelierBottomNavBtn !== null) throw new Error('AI Sommelier button should be removed from bottom nav');
 
     // 3D. Test 1-Thumb Order Tracking Bottom Sheet
     console.log(`\n[Test 3D] 1-Thumb Order Tracking Bottom Sheet:`);
